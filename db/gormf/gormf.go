@@ -8,7 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// Config is for raw SQL database operations
+// Config is for Gorm database operations
 type Config struct {
 	// DB is the database connection
 	// must provide if want to insert data into the database
