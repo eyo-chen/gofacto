@@ -10,28 +10,29 @@ import (
 
 // Config is the configuration for the factory
 type Config[T any] struct {
-	// BluePrint is a client-defined function to create a new value
-	// if not provided, non-zero default values is set
-	// BluePrint must follow the below signature
+	// BluePrint is a client-defined function to create a new value.
+	// If not provided, non-zero default values is set.
+	//
+	// BluePrint must follow the signature:
 	// type bluePrintFunc[T any] func(i int, last T) T
 	BluePrint bluePrintFunc[T]
 
-	// DB is the interface for the Database
-	// must be provided if want to do database operations
+	// DB is the interface for the Database.
+	// It must be provided if want to do database operations
 	// use sqlf if using raw sql
-	// use egorm if using gorm
-	// use emongo if using mongo
+	// use gormf if using gorm
+	// use mongof if using mongo
 	DB db.Database
 
-	// StorageName is the name specified where the value is stored
-	// it will be table name for sql, and collection name for mongodb
-	// it is optional
-	// if not provided, camel case of the type name will be used
+	// StorageName is the name specified where the value is stored.
+	// It will be table name for sql, and collection name for mongodb.
+	// It is optional.
+	// If not provided, camel case of the type name will be used.
 	StorageName string
 
-	// isSetZeroValue is to determine if the zero value should be set
-	// it is optional
-	// if not provided, it will be true
+	// isSetZeroValue is to determine if the zero value should be set.
+	// It is optional.
+	// If not provided, it will be true
 	IsSetZeroValue *bool
 }
 
@@ -343,6 +344,79 @@ func (b *builderList[T]) WithTraits(names ...string) *builderList[T] {
 	return b
 }
 
+// WithTrait invokes the traiter based on given name
+func (b *builderList[T]) WithTrait(name string) *builderList[T] {
+	if len(b.errors) > 0 {
+		return b
+	}
+
+	tr, ok := b.f.traits[name]
+	if !ok {
+		b.errors = append(b.errors, fmt.Errorf("WithTrait: %s is not defiend at SetTrait", name))
+		return b
+	}
+
+	for i := 0; i < len(b.list); i++ {
+		tr(b.list[i])
+	}
+
+	return b
+}
+
+// SetZero sets the fields to zero value
+func (b *builder[T]) SetZero(fields ...string) *builder[T] {
+	if len(b.errors) > 0 {
+		return b
+	}
+
+	for _, field := range fields {
+		curField := reflect.ValueOf(b.v).Elem().FieldByName(field)
+		if !curField.IsValid() {
+			b.errors = append(b.errors, fmt.Errorf("SetZero: field %s is not found", field))
+			return b
+		}
+
+		if !curField.CanSet() {
+			b.errors = append(b.errors, fmt.Errorf("SetZero: field %s can not be set", field))
+			return b
+		}
+
+		curField.Set(reflect.Zero(curField.Type()))
+	}
+
+	return b
+}
+
+// SetZero sets the fields to zero value for the given index.
+// The paramter i is the index of the list you want to set the zero value
+func (b *builderList[T]) SetZero(i int, fields ...string) *builderList[T] {
+	if len(b.errors) > 0 {
+		return b
+	}
+
+	if i >= len(b.list) || i < 0 {
+		b.errors = append(b.errors, fmt.Errorf("SetZero: index %d is out of range", i))
+		return b
+	}
+
+	for _, field := range fields {
+		curField := reflect.ValueOf(b.list[i]).Elem().FieldByName(field)
+		if !curField.IsValid() {
+			b.errors = append(b.errors, fmt.Errorf("SetZero: field %s is not found", field))
+			return b
+		}
+
+		if !curField.CanSet() {
+			b.errors = append(b.errors, fmt.Errorf("SetZero: field %s can not be set", field))
+			return b
+		}
+
+		curField.Set(reflect.Zero(curField.Type()))
+	}
+
+	return b
+}
+
 // WihtOne set one association to the factory value
 func (b *builder[T]) WithOne(v interface{}) *builder[T] {
 	if len(b.errors) > 0 {
@@ -515,58 +589,4 @@ func (b *builderList[T]) InsertWithAss() ([]T, []interface{}, error) {
 	}
 
 	return v, assVals, nil
-}
-
-// SetZero sets the fields to zero value
-func (b *builder[T]) SetZero(fields ...string) *builder[T] {
-	if len(b.errors) > 0 {
-		return b
-	}
-
-	for _, field := range fields {
-		curField := reflect.ValueOf(b.v).Elem().FieldByName(field)
-		if !curField.IsValid() {
-			b.errors = append(b.errors, fmt.Errorf("SetZero: field %s is not found", field))
-			return b
-		}
-
-		if !curField.CanSet() {
-			b.errors = append(b.errors, fmt.Errorf("SetZero: field %s can not be set", field))
-			return b
-		}
-
-		curField.Set(reflect.Zero(curField.Type()))
-	}
-
-	return b
-}
-
-// SetZero sets the fields to zero value for the given index
-// i is the index of the list
-func (b *builderList[T]) SetZero(i int, fields ...string) *builderList[T] {
-	if len(b.errors) > 0 {
-		return b
-	}
-
-	if i >= len(b.list) {
-		b.errors = append(b.errors, fmt.Errorf("SetZero: index %d is out of range", i))
-		return b
-	}
-
-	for _, field := range fields {
-		curField := reflect.ValueOf(b.list[i]).Elem().FieldByName(field)
-		if !curField.IsValid() {
-			b.errors = append(b.errors, fmt.Errorf("SetZero: field %s is not found", field))
-			return b
-		}
-
-		if !curField.CanSet() {
-			b.errors = append(b.errors, fmt.Errorf("SetZero: field %s can not be set", field))
-			return b
-		}
-
-		curField.Set(reflect.Zero(curField.Type()))
-	}
-
-	return b
 }

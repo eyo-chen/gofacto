@@ -123,8 +123,9 @@ func setNonZeroValues(i int, v interface{}) {
 		}
 
 		// For other types, set non-zero values if the field is zero
-		v := genNonZeroValue(curField.Type, i)
-		curVal.Set(reflect.ValueOf(v))
+		if v := genNonZeroValue(curField.Type, i); v != nil {
+			curVal.Set(reflect.ValueOf(v))
+		}
 	}
 }
 
@@ -167,8 +168,9 @@ func setNonZeroValuesForSlice(i int, v interface{}) {
 
 	// handle other types
 	t := val.Type().Elem()
-	tv := genNonZeroValue(t, i)
-	val.Set(reflect.Append(val, reflect.ValueOf(tv)))
+	if tv := genNonZeroValue(t, i); tv != nil {
+		val.Set(reflect.Append(val, reflect.ValueOf(tv)))
+	}
 }
 
 // genNonZeroValue generates a non-zero value for the given type
