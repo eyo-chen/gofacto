@@ -10,28 +10,32 @@ import (
 
 // Config is the configuration for the factory
 type Config[T any] struct {
-	// BluePrint is a client-defined function to create a new value
-	// if not provided, non-zero default values is set
-	// BluePrint must follow the below signature
+	// BluePrint is a client-defined function to create a new value.
+	// If not provided, non-zero default values is set.
+	//
+	// BluePrint must follow the signature:
 	// type bluePrintFunc[T any] func(i int, last T) T
 	BluePrint bluePrintFunc[T]
 
-	// DB is the interface for the Database
-	// must be provided if want to do database operations
-	// use sqlf if using raw sql
-	// use egorm if using gorm
-	// use emongo if using mongo
+	// DB is the interface for the Database.
+	// It must be provided if want to do database operations.
+	//
+	// use sqlf for raw sql
+	//
+	// use gormf for gorm
+	//
+	// use mongof for mongo
 	DB db.Database
 
-	// StorageName is the name specified where the value is stored
-	// it will be table name for sql, and collection name for mongodb
-	// it is optional
-	// if not provided, camel case of the type name will be used
+	// StorageName is the name specified where the value is stored.
+	// It will be table name for sql, and collection name for mongodb.
+	// It is optional.
+	// If not provided, camel case of the type name will be used.
 	StorageName string
 
-	// isSetZeroValue is to determine if the zero value should be set
-	// it is optional
-	// if not provided, it will be true
+	// isSetZeroValue is to determine if the zero value should be set.
+	// It is optional.
+	// If not provided, it will be default to true.
 	IsSetZeroValue *bool
 }
 
