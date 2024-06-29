@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 	"time"
 	"unicode"
@@ -61,13 +62,18 @@ func genFinalError(errs []error) error {
 
 // setNonZeroValues sets non-zero values to the given struct
 // v must be a pointer to a struct
-func setNonZeroValues(i int, v interface{}) {
+func setNonZeroValues(i int, v interface{}, ignoreFields []string) {
 	val := reflect.ValueOf(v).Elem()
 	typeOfVal := val.Type()
 
 	for k := 0; k < val.NumField(); k++ {
 		curVal := val.Field(k)
 		curField := typeOfVal.Field(k)
+
+		// skip ignored fields
+		if len(ignoreFields) > 0 && slices.Contains(ignoreFields, curField.Name) {
+			continue
+		}
 
 		// skip non-zero fields, unexported fields, and ID field
 		if !curVal.IsZero() || !curVal.CanSet() || curField.Name == "ID" || curField.PkgPath != "" {
@@ -89,7 +95,7 @@ func setNonZeroValues(i int, v interface{}) {
 
 		// If the field is a struct, recursively set non-zero values for its fields
 		if curField.Type.Kind() == reflect.Struct {
-			setNonZeroValues(i, curVal.Addr().Interface())
+			setNonZeroValues(i, curVal.Addr().Interface(), ignoreFields)
 			continue
 		}
 
@@ -97,27 +103,27 @@ func setNonZeroValues(i int, v interface{}) {
 		if curField.Type.Kind() == reflect.Ptr && curField.Type.Elem().Kind() == reflect.Struct {
 			if curVal.IsNil() {
 				newInstance := reflect.New(curField.Type.Elem()).Elem()
-				setNonZeroValues(i, newInstance.Addr().Interface())
+				setNonZeroValues(i, newInstance.Addr().Interface(), ignoreFields)
 				curVal.Set(newInstance.Addr())
 			} else {
-				setNonZeroValues(i, curVal.Interface())
+				setNonZeroValues(i, curVal.Interface(), ignoreFields)
 			}
 			continue
 		}
 
 		// If the field is a slice
 		if curField.Type.Kind() == reflect.Slice {
-			setNonZeroValuesForSlice(i, curVal.Addr().Interface())
+			setNonZeroValuesForSlice(i, curVal.Addr().Interface(), ignoreFields)
 			continue
 		}
 
 		if curField.Type.Kind() == reflect.Ptr && curField.Type.Elem().Kind() == reflect.Slice {
 			if curVal.IsNil() {
 				newInstance := reflect.New(curField.Type.Elem()).Elem()
-				setNonZeroValuesForSlice(i, newInstance.Addr().Interface())
+				setNonZeroValuesForSlice(i, newInstance.Addr().Interface(), ignoreFields)
 				curVal.Set(newInstance.Addr())
 			} else {
-				setNonZeroValuesForSlice(i, curVal.Interface())
+				setNonZeroValuesForSlice(i, curVal.Interface(), ignoreFields)
 			}
 			continue
 		}
@@ -131,13 +137,13 @@ func setNonZeroValues(i int, v interface{}) {
 
 // setNonZeroValuesForSlice sets non-zero values to the given slice
 // v must be a pointer to a slice
-func setNonZeroValuesForSlice(i int, v interface{}) {
+func setNonZeroValuesForSlice(i int, v interface{}, ignoreFields []string) {
 	val := reflect.ValueOf(v).Elem()
 
 	// handle slice
 	if val.Type().Elem().Kind() == reflect.Slice {
 		e := reflect.New(val.Type().Elem()).Elem()
-		setNonZeroValuesForSlice(i, e.Addr().Interface())
+		setNonZeroValuesForSlice(i, e.Addr().Interface(), ignoreFields)
 		val.Set(reflect.Append(val, e))
 		return
 	}
@@ -145,7 +151,7 @@ func setNonZeroValuesForSlice(i int, v interface{}) {
 	// handle slice of pointers
 	if val.Type().Elem().Kind() == reflect.Ptr && val.Type().Elem().Elem().Kind() == reflect.Slice {
 		e := reflect.New(val.Type().Elem().Elem()).Elem()
-		setNonZeroValuesForSlice(i, e.Addr().Interface())
+		setNonZeroValuesForSlice(i, e.Addr().Interface(), ignoreFields)
 		val.Set(reflect.Append(val, e.Addr()))
 		return
 	}
@@ -153,7 +159,7 @@ func setNonZeroValuesForSlice(i int, v interface{}) {
 	// handle struct
 	if val.Type().Elem().Kind() == reflect.Struct {
 		e := reflect.New(val.Type().Elem()).Elem()
-		setNonZeroValues(i, e.Addr().Interface())
+		setNonZeroValues(i, e.Addr().Interface(), ignoreFields)
 		val.Set(reflect.Append(val, e))
 		return
 	}
@@ -161,7 +167,7 @@ func setNonZeroValuesForSlice(i int, v interface{}) {
 	// handle pointer to struct
 	if val.Type().Elem().Kind() == reflect.Ptr && val.Type().Elem().Elem().Kind() == reflect.Struct {
 		e := reflect.New(val.Type().Elem().Elem())
-		setNonZeroValues(i, e.Interface())
+		setNonZeroValues(i, e.Interface(), ignoreFields)
 		val.Set(reflect.Append(val, e))
 		return
 	}
@@ -302,7 +308,7 @@ func setAssValue(v interface{}, tagToInfo map[string]tagInfo, index int, sourceF
 		return fmt.Errorf("%s: type %s, value %v is not found at tag", sourceFn, name, v)
 	}
 
-	setNonZeroValues(index, v)
+	setNonZeroValues(index, v, nil)
 	return nil
 }
 

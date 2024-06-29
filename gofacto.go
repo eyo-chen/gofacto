@@ -33,6 +33,10 @@ type Config[T any] struct {
 	// If not provided, camel case of the type name will be used.
 	StorageName string
 
+	// IgnoreFields is the list of fields to be ignored
+	// these fields will not be set to non-zero values
+	IgnoreFields []string
+
 	// isSetZeroValue is to determine if the zero value should be set.
 	// It is optional.
 	// If not provided, it will be default to true.
@@ -46,6 +50,7 @@ type Factory[T any] struct {
 	dataType       reflect.Type
 	empty          T
 	index          int
+	ignoreFields   []string
 	isSetZeroValue bool
 
 	// map from name to trait function
@@ -103,6 +108,7 @@ func New[T any](v T) *Factory[T] {
 func (f *Factory[T]) SetConfig(c Config[T]) *Factory[T] {
 	f.bluePrint = c.BluePrint
 	f.db = c.DB
+	f.ignoreFields = c.IgnoreFields
 
 	if c.StorageName == "" {
 		f.storageName = fmt.Sprintf("%ss", camelToSnake(f.dataType.Name()))
@@ -140,7 +146,7 @@ func (f *Factory[T]) Build() *builder[T] {
 	}
 
 	if f.isSetZeroValue {
-		setNonZeroValues(f.index, &v)
+		setNonZeroValues(f.index, &v, f.ignoreFields)
 	}
 
 	f.index++
@@ -168,7 +174,7 @@ func (f *Factory[T]) BuildList(n int) *builderList[T] {
 		}
 
 		if f.isSetZeroValue {
-			setNonZeroValues(f.index, &v)
+			setNonZeroValues(f.index, &v, f.ignoreFields)
 		}
 
 		list[i] = &v
