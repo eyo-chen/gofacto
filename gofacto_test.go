@@ -44,6 +44,7 @@ func TestBuild(t *testing.T) {
 		"when pass buildPrint without setting zero values, other fileds remain zero value":   build_BluePrintNotSetZeroValues,
 		"when not pass buildPrint, all fields set by gofacto":                                build_NoBluePrint,
 		"when not pass buildPrint without setting zero values, all fields remain zero value": build_NoBluePrintNotSetZeroValues,
+		"when setting ignore fields, ignore fields should be zero value":                     build_IgnoreFields,
 	} {
 		t.Run(getFunName(fn), func(t *testing.T) {
 			fn(t)
@@ -334,6 +335,45 @@ func build_NoBluePrintNotSetZeroValues(t *testing.T) {
 			}
 
 			if err := compareVal(got, tt.want()); err != nil {
+				t.Errorf(err.Error())
+			}
+		})
+	}
+}
+
+// TODO: make error message more readable
+func build_IgnoreFields(t *testing.T) {
+	f := New(testStruct{}).SetConfig(Config[testStruct]{IgnoreFields: []string{"Int", "PtrInt", "Str", "PtrStr", "Incorrect field"}})
+
+	tests := []struct {
+		desc              string
+		wantZeroFields    []string
+		wantNonZeroFields []string
+	}{
+		{
+			desc:              "first build",
+			wantZeroFields:    []string{"Int", "PtrInt", "Str", "PtrStr", "Interface"},
+			wantNonZeroFields: filterFields(testStruct{}, "Int", "PtrInt", "Str", "PtrStr", "Interface"),
+		},
+		{
+			desc:              "second build",
+			wantZeroFields:    []string{"Int", "PtrInt", "Str", "PtrStr", "Interface"},
+			wantNonZeroFields: filterFields(testStruct{}, "Int", "PtrInt", "Str", "PtrStr", "Interface"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			got, err := f.Build().Get()
+			if err != nil {
+				t.Errorf("error from gofacto: %v", err)
+			}
+
+			if err := isZeroVal(got, tt.wantNonZeroFields...); err != nil {
+				t.Errorf(err.Error())
+			}
+
+			if err := isNotZeroVal(got, tt.wantZeroFields...); err != nil {
 				t.Errorf(err.Error())
 			}
 		})
