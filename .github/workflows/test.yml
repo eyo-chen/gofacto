@@ -29,7 +29,7 @@ jobs:
         run: go mod download
 
       - name: Build
-        run: go build -v -o ./bin/myapp ./cmd
+        run: go build -v -o ./bin/myapp .
 
       - name: Run Tests with Coverage
         run: go test
