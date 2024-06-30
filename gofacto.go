@@ -353,6 +353,25 @@ func (b *builderList[T]) WithTraits(names ...string) *builderList[T] {
 	return b
 }
 
+// WithTrait invokes the traiter based on given name
+func (b *builderList[T]) WithTrait(name string) *builderList[T] {
+	if len(b.errors) > 0 {
+		return b
+	}
+
+	tr, ok := b.f.traits[name]
+	if !ok {
+		b.errors = append(b.errors, fmt.Errorf("WithTrait: %s is not defiend at SetTrait", name))
+		return b
+	}
+
+	for i := 0; i < len(b.list); i++ {
+		tr(b.list[i])
+	}
+
+	return b
+}
+
 // SetZero sets the fields to zero value
 func (b *builder[T]) SetZero(fields ...string) *builder[T] {
 	if len(b.errors) > 0 {
