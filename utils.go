@@ -238,27 +238,11 @@ func setField(target interface{}, name string, source interface{}, sourceFn stri
 	}
 
 	sourceIDKind := sourceIDField.Kind()
-	if sourceIDKind != reflect.Int &&
-		sourceIDKind != reflect.Int64 &&
-		sourceIDKind != reflect.Int32 &&
-		sourceIDKind != reflect.Int16 &&
-		sourceIDKind != reflect.Int8 &&
-		sourceIDKind != reflect.Uint &&
-		sourceIDKind != reflect.Uint64 &&
-		sourceIDKind != reflect.Uint32 &&
-		sourceIDKind != reflect.Uint16 &&
-		sourceIDKind != reflect.Uint8 {
+	if !isIntType(sourceIDKind) && !isUintType(sourceIDKind) {
 		return fmt.Errorf("%s: source field ID is not an integer", sourceFn)
 	}
 
-	// TODO: What if targetField is int, but sourceIDField is uint?
-	switch sourceIDField.Kind() {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		targetField.SetInt(sourceIDField.Int())
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		targetField.SetUint(sourceIDField.Uint())
-	}
-
+	setFieldValue(targetField, sourceIDField)
 	return nil
 }
 
@@ -358,4 +342,37 @@ func camelToSnake(input string) string {
 	}
 
 	return buf.String()
+}
+
+// setFieldValue sets the value of the source to the target,
+// and it also handles the conversion between int and uint.
+// Normally, it's used to set the ID field of the target struct
+func setFieldValue(target, source reflect.Value) {
+	targetKind := target.Kind()
+	sourceKind := source.Kind()
+
+	if isIntType(targetKind) && isIntType(sourceKind) {
+		target.SetInt(source.Int())
+		return
+	}
+
+	if isUintType(targetKind) && isUintType(sourceKind) {
+		target.SetUint(source.Uint())
+		return
+	}
+
+	if isIntType(targetKind) {
+		target.SetInt(int64(source.Uint()))
+		return
+	}
+
+	target.SetUint(uint64(source.Int()))
+}
+
+func isIntType(k reflect.Kind) bool {
+	return k >= reflect.Int && k <= reflect.Int64
+}
+
+func isUintType(k reflect.Kind) bool {
+	return k >= reflect.Uint && k <= reflect.Uint64
 }
