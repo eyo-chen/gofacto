@@ -101,13 +101,9 @@ func setNonZeroValues(i int, v interface{}, ignoreFields []string) {
 
 		// If the field is a pointer, create a new instance of the pointed-to struct type and set its non-zero values
 		if curField.Type.Kind() == reflect.Ptr && curField.Type.Elem().Kind() == reflect.Struct {
-			if curVal.IsNil() {
-				newInstance := reflect.New(curField.Type.Elem()).Elem()
-				setNonZeroValues(i, newInstance.Addr().Interface(), ignoreFields)
-				curVal.Set(newInstance.Addr())
-			} else {
-				setNonZeroValues(i, curVal.Interface(), ignoreFields)
-			}
+			newInstance := reflect.New(curField.Type.Elem()).Elem()
+			setNonZeroValues(i, newInstance.Addr().Interface(), ignoreFields)
+			curVal.Set(newInstance.Addr())
 			continue
 		}
 
@@ -118,13 +114,9 @@ func setNonZeroValues(i int, v interface{}, ignoreFields []string) {
 		}
 
 		if curField.Type.Kind() == reflect.Ptr && curField.Type.Elem().Kind() == reflect.Slice {
-			if curVal.IsNil() {
-				newInstance := reflect.New(curField.Type.Elem()).Elem()
-				setNonZeroValuesForSlice(i, newInstance.Addr().Interface(), ignoreFields)
-				curVal.Set(newInstance.Addr())
-			} else {
-				setNonZeroValuesForSlice(i, curVal.Interface(), ignoreFields)
-			}
+			newInstance := reflect.New(curField.Type.Elem()).Elem()
+			setNonZeroValuesForSlice(i, newInstance.Addr().Interface(), ignoreFields)
+			curVal.Set(newInstance.Addr())
 			continue
 		}
 
