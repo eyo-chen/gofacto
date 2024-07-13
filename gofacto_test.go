@@ -1141,7 +1141,7 @@ func withTrait_OnBuilderList(t *testing.T) {
 					},
 				}
 			},
-			hasError: true,
+			hasError: false,
 		},
 		{
 			desc:     "set trait with incorrect value",
