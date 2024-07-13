@@ -1,0 +1,16 @@
+CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT,
+    username VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS posts (
+    id INT AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    content TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
