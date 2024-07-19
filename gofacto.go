@@ -1,6 +1,7 @@
 package gofacto
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"reflect"
@@ -80,6 +81,7 @@ type tagInfo struct {
 
 // builder is for building a single value
 type builder[T any] struct {
+	ctx    context.Context
 	v      *T
 	errors []error
 	f      *Factory[T]
@@ -87,6 +89,7 @@ type builder[T any] struct {
 
 // builderList is for building a list of values
 type builderList[T any] struct {
+	ctx    context.Context
 	list   []*T
 	errors []error
 	f      *Factory[T]
@@ -141,7 +144,7 @@ func (f *Factory[T]) Reset() {
 }
 
 // Build builds a value
-func (f *Factory[T]) Build() *builder[T] {
+func (f *Factory[T]) Build(ctx context.Context) *builder[T] {
 	var v T
 	if f.bluePrint != nil {
 		v = f.bluePrint(f.index, v)
@@ -161,7 +164,7 @@ func (f *Factory[T]) Build() *builder[T] {
 }
 
 // BuildList creates a list of n values
-func (f *Factory[T]) BuildList(n int) *builderList[T] {
+func (f *Factory[T]) BuildList(ctx context.Context, n int) *builderList[T] {
 	list := make([]*T, n)
 	errs := []error{}
 	if n < 1 {
@@ -223,7 +226,7 @@ func (b *builder[T]) Insert() (T, error) {
 		return b.f.empty, genFinalError(b.errors)
 	}
 
-	val, err := b.f.db.Insert(db.InserParams{StorageName: b.f.storageName, Value: b.v})
+	val, err := b.f.db.Insert(b.ctx, db.InserParams{StorageName: b.f.storageName, Value: b.v})
 	if err != nil {
 		b.errors = append(b.errors, err)
 		return b.f.empty, genFinalError(b.errors)
@@ -253,7 +256,7 @@ func (b *builderList[T]) Insert() ([]T, error) {
 	for i, v := range b.list {
 		input[i] = v
 	}
-	vals, err := b.f.db.InsertList(db.InserListParams{StorageName: b.f.storageName, Values: input})
+	vals, err := b.f.db.InsertList(b.ctx, db.InserListParams{StorageName: b.f.storageName, Values: input})
 	if err != nil {
 		b.errors = append(b.errors, err)
 		return nil, genFinalError(b.errors)
@@ -529,7 +532,7 @@ func (b *builder[T]) InsertWithAss() (T, []interface{}, error) {
 	}
 
 	// generate and insert the associations
-	assVals, err := genAndInsertAss(b.f.db, b.f.associations, b.f.tagToInfo)
+	assVals, err := genAndInsertAss(b.ctx, b.f.db, b.f.associations, b.f.tagToInfo)
 	if err != nil {
 		b.errors = append(b.errors, err)
 		return b.f.empty, nil, genFinalError(b.errors)
@@ -564,7 +567,7 @@ func (b *builderList[T]) InsertWithAss() ([]T, []interface{}, error) {
 	}
 
 	// generate and insert
-	assVals, err := genAndInsertAss(b.f.db, b.f.associations, b.f.tagToInfo)
+	assVals, err := genAndInsertAss(b.ctx, b.f.db, b.f.associations, b.f.tagToInfo)
 	if err != nil {
 		b.errors = append(b.errors, err)
 		return nil, nil, genFinalError(b.errors)

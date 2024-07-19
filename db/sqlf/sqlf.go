@@ -17,13 +17,9 @@ type Config struct {
 	// DB is the database connection
 	// must provide if want to insert data into the database
 	DB *sql.DB
-
-	// Ctx is the context for the database operations
-	// it is optional
-	Ctx context.Context
 }
 
-func (s *Config) Insert(params db.InserParams) (interface{}, error) {
+func (s *Config) Insert(ctx context.Context, params db.InserParams) (interface{}, error) {
 	rawStmt, vals := prepareStmtAndVals(params.StorageName, params.Value)
 
 	// Prepare the insert statement
@@ -39,7 +35,7 @@ func (s *Config) Insert(params db.InserParams) (interface{}, error) {
 	}
 	defer tx.Rollback()
 
-	id, err := insertToDB(s.Ctx, tx, stmt, vals[0])
+	id, err := insertToDB(ctx, tx, stmt, vals[0])
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +48,7 @@ func (s *Config) Insert(params db.InserParams) (interface{}, error) {
 	return params.Value, nil
 }
 
-func (s *Config) InsertList(params db.InserListParams) ([]interface{}, error) {
+func (s *Config) InsertList(ctx context.Context, params db.InserListParams) ([]interface{}, error) {
 	rawStmt, fieldValues := prepareStmtAndVals(params.StorageName, params.Values...)
 
 	stmt, err := s.DB.Prepare(rawStmt)
@@ -69,7 +65,7 @@ func (s *Config) InsertList(params db.InserListParams) ([]interface{}, error) {
 
 	result := make([]interface{}, len(fieldValues))
 	for i, vals := range fieldValues {
-		id, err := insertToDB(s.Ctx, tx, stmt, vals)
+		id, err := insertToDB(ctx, tx, stmt, vals)
 		if err != nil {
 			return nil, err
 		}
@@ -163,12 +159,7 @@ func insertToDB(ctx context.Context, tx *sql.Tx, stmt *sql.Stmt, vals []interfac
 	var res sql.Result
 	var errSQL error
 
-	if ctx == nil {
-		res, errSQL = tx.Stmt(stmt).Exec(vals...)
-	} else {
-		res, errSQL = tx.Stmt(stmt).ExecContext(ctx, vals...)
-	}
-
+	res, errSQL = tx.Stmt(stmt).ExecContext(ctx, vals...)
 	if errSQL != nil {
 		return 0, errSQL
 	}

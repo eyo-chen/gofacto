@@ -2,6 +2,7 @@ package gofacto
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"reflect"
@@ -239,7 +240,7 @@ func setField(target interface{}, name string, source interface{}, sourceFn stri
 }
 
 // genAndInsertAss inserts the associations value into the database and returns with the inserted values
-func genAndInsertAss(d db.Database, associations map[string][]interface{}, tagToInfo map[string]tagInfo) ([]interface{}, error) {
+func genAndInsertAss(ctx context.Context, d db.Database, associations map[string][]interface{}, tagToInfo map[string]tagInfo) ([]interface{}, error) {
 	if len(tagToInfo) == 0 {
 		return nil, errors.New("tagToInfo is not set")
 	}
@@ -252,7 +253,7 @@ func genAndInsertAss(d db.Database, associations map[string][]interface{}, tagTo
 	for name, vals := range associations {
 		tableName := tagToInfo[name].tableName
 
-		v, err := d.InsertList(db.InserListParams{StorageName: tableName, Values: vals})
+		v, err := d.InsertList(ctx, db.InserListParams{StorageName: tableName, Values: vals})
 		if err != nil {
 			return nil, err
 		}
