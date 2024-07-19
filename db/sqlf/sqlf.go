@@ -19,17 +19,17 @@ type Config struct {
 	DB *sql.DB
 }
 
-func (s *Config) Insert(ctx context.Context, params db.InserParams) (interface{}, error) {
+func (c *Config) Insert(ctx context.Context, params db.InserParams) (interface{}, error) {
 	rawStmt, vals := prepareStmtAndVals(params.StorageName, params.Value)
 
 	// Prepare the insert statement
-	stmt, err := s.DB.Prepare(rawStmt)
+	stmt, err := c.DB.Prepare(rawStmt)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 
-	tx, err := s.DB.Begin()
+	tx, err := c.DB.Begin()
 	if err != nil {
 		return nil, err
 	}
@@ -48,16 +48,16 @@ func (s *Config) Insert(ctx context.Context, params db.InserParams) (interface{}
 	return params.Value, nil
 }
 
-func (s *Config) InsertList(ctx context.Context, params db.InserListParams) ([]interface{}, error) {
+func (c *Config) InsertList(ctx context.Context, params db.InserListParams) ([]interface{}, error) {
 	rawStmt, fieldValues := prepareStmtAndVals(params.StorageName, params.Values...)
 
-	stmt, err := s.DB.Prepare(rawStmt)
+	stmt, err := c.DB.Prepare(rawStmt)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 
-	tx, err := s.DB.Begin()
+	tx, err := c.DB.Begin()
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +83,7 @@ func (s *Config) InsertList(ctx context.Context, params db.InserListParams) ([]i
 	return result, nil
 }
 
-func (s *Config) SetIDField(v interface{}, i int) error {
+func (c *Config) SetIDField(v interface{}, i int) error {
 	if reflect.ValueOf(v).Kind() != reflect.Ptr {
 		return fmt.Errorf("SetIDField: argument must be a pointer")
 	}
