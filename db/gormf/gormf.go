@@ -20,10 +20,6 @@ type Config struct {
 }
 
 func (s *Config) Insert(params db.InserParams) (interface{}, error) {
-	if s.DB == nil {
-		return nil, fmt.Errorf("database connection is not provided")
-	}
-
 	if s.Ctx != nil {
 		if err := s.DB.WithContext(s.Ctx).Table(params.StorageName).Create(params.Value).Error; err != nil {
 			return nil, err
