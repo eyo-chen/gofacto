@@ -218,31 +218,28 @@ func (b *builderList[T]) Get() ([]T, error) {
 
 // Insert inserts the value into the database
 func (b *builder[T]) Insert() (T, error) {
-	if b.f.db == nil {
-		b.errors = append(b.errors, errors.New("Insert: DB is not provided"))
-	}
-
 	if len(b.errors) > 0 {
 		return b.f.empty, genFinalError(b.errors)
 	}
 
+	if b.f.db == nil {
+		return b.f.empty, errors.New("DB connection is not provided")
+	}
+
 	if len(b.f.associations) > 0 {
 		if err := b.setAss(); err != nil {
-			b.errors = append(b.errors, err)
-			return b.f.empty, genFinalError(b.errors)
+			return b.f.empty, err
 		}
 	}
 
 	val, err := b.f.db.Insert(b.ctx, db.InserParams{StorageName: b.f.storageName, Value: b.v})
 	if err != nil {
-		b.errors = append(b.errors, err)
-		return b.f.empty, genFinalError(b.errors)
+		return b.f.empty, err
 	}
 
 	v, ok := val.(*T)
 	if !ok {
-		b.errors = append(b.errors, fmt.Errorf("Insert: can't convert to pointer"))
-		return b.f.empty, genFinalError(b.errors)
+		return b.f.empty, errors.New("Insert: can't convert to pointer")
 	}
 
 	return *v, nil
@@ -250,18 +247,17 @@ func (b *builder[T]) Insert() (T, error) {
 
 // Insert inserts the list of values into the database
 func (b *builderList[T]) Insert() ([]T, error) {
-	if b.f.db == nil {
-		b.errors = append(b.errors, errors.New("Insert: DB is not provided"))
-	}
-
 	if len(b.errors) > 0 {
 		return nil, genFinalError(b.errors)
 	}
 
+	if b.f.db == nil {
+		return nil, errors.New("DB connection is not provided")
+	}
+
 	if len(b.f.associations) > 0 {
 		if err := b.setAss(); err != nil {
-			b.errors = append(b.errors, err)
-			return nil, genFinalError(b.errors)
+			return nil, err
 		}
 	}
 
@@ -272,8 +268,7 @@ func (b *builderList[T]) Insert() ([]T, error) {
 	}
 	vals, err := b.f.db.InsertList(b.ctx, db.InserListParams{StorageName: b.f.storageName, Values: input})
 	if err != nil {
-		b.errors = append(b.errors, err)
-		return nil, genFinalError(b.errors)
+		return nil, err
 	}
 
 	// convert to []T
@@ -281,8 +276,7 @@ func (b *builderList[T]) Insert() ([]T, error) {
 	for i, val := range vals {
 		v, ok := val.(*T)
 		if !ok {
-			b.errors = append(b.errors, fmt.Errorf("Insert: can't convert to pointer"))
-			return nil, genFinalError(b.errors)
+			return nil, errors.New("Insert: can't convert to pointer")
 		}
 
 		output[i] = *v
