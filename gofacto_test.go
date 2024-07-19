@@ -382,7 +382,7 @@ func build_IgnoreFields(t *testing.T) {
 	}
 }
 
-func TestBuildList(mockCTX, t *testing.T) {
+func TestBuildList(t *testing.T) {
 	for _, fn := range map[string]func(*testing.T){
 		"when pass buildList with all fields, all fields set by bluePrint":                  buildList_BluePrintAllFields,
 		"when pass buildList with some fields, other fields set by gofaco":                  buildList_BluePrintSomeFields,
