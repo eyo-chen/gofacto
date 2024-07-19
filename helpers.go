@@ -94,13 +94,13 @@ func setNonZeroValues(i int, v interface{}, ignoreFields []string) {
 			continue
 		}
 
-		// If the field is a struct, recursively set non-zero values for its fields
+		// handle struct
 		if curField.Type.Kind() == reflect.Struct {
 			setNonZeroValues(i, curVal.Addr().Interface(), ignoreFields)
 			continue
 		}
 
-		// If the field is a pointer, create a new instance of the pointed-to struct type and set its non-zero values
+		// handle pointer to struct
 		if curField.Type.Kind() == reflect.Ptr && curField.Type.Elem().Kind() == reflect.Struct {
 			newInstance := reflect.New(curField.Type.Elem()).Elem()
 			setNonZeroValues(i, newInstance.Addr().Interface(), ignoreFields)
@@ -108,12 +108,13 @@ func setNonZeroValues(i int, v interface{}, ignoreFields []string) {
 			continue
 		}
 
-		// If the field is a slice
+		// handle slice
 		if curField.Type.Kind() == reflect.Slice {
 			setNonZeroValuesForSlice(i, curVal.Addr().Interface(), ignoreFields)
 			continue
 		}
 
+		// handle pointer to slice
 		if curField.Type.Kind() == reflect.Ptr && curField.Type.Elem().Kind() == reflect.Slice {
 			newInstance := reflect.New(curField.Type.Elem()).Elem()
 			setNonZeroValuesForSlice(i, newInstance.Addr().Interface(), ignoreFields)
@@ -128,8 +129,8 @@ func setNonZeroValues(i int, v interface{}, ignoreFields []string) {
 	}
 }
 
-// setNonZeroValuesForSlice sets non-zero values to the given slice
-// v must be a pointer to a slice
+// setNonZeroValuesForSlice sets non-zero values to the given slice.
+// Parameter v must be a pointer to a slice
 func setNonZeroValuesForSlice(i int, v interface{}, ignoreFields []string) {
 	val := reflect.ValueOf(v).Elem()
 
