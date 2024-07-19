@@ -226,6 +226,13 @@ func (b *builder[T]) Insert() (T, error) {
 		return b.f.empty, genFinalError(b.errors)
 	}
 
+	if len(b.f.associations) > 0 {
+		if err := b.setAss(); err != nil {
+			b.errors = append(b.errors, err)
+			return b.f.empty, genFinalError(b.errors)
+		}
+	}
+
 	val, err := b.f.db.Insert(b.ctx, db.InserParams{StorageName: b.f.storageName, Value: b.v})
 	if err != nil {
 		b.errors = append(b.errors, err)
@@ -249,6 +256,13 @@ func (b *builderList[T]) Insert() ([]T, error) {
 
 	if len(b.errors) > 0 {
 		return nil, genFinalError(b.errors)
+	}
+
+	if len(b.f.associations) > 0 {
+		if err := b.setAss(); err != nil {
+			b.errors = append(b.errors, err)
+			return nil, genFinalError(b.errors)
+		}
 	}
 
 	// convert to any type
@@ -525,52 +539,35 @@ func (b *builderList[T]) WithMany(values ...interface{}) *builderList[T] {
 	return b
 }
 
-// InsertWithAss inserts the value with the associations into the database
-func (b *builder[T]) InsertWithAss() (T, []interface{}, error) {
-	if len(b.errors) > 0 {
-		return b.f.empty, nil, genFinalError(b.errors)
-	}
-
-	// generate and insert the associations
-	assVals, err := genAndInsertAss(b.ctx, b.f.db, b.f.associations, b.f.tagToInfo)
-	if err != nil {
-		b.errors = append(b.errors, err)
-		return b.f.empty, nil, genFinalError(b.errors)
+// setAss sets and inserts the associations
+func (b *builder[T]) setAss() error {
+	// insert the associations
+	if err := insertAss(b.ctx, b.f.db, b.f.associations, b.f.tagToInfo); err != nil {
+		return err
 	}
 
 	// set the connection between the factory value and the associations
 	for name, vals := range b.f.associations {
-		// use vs[0] because we can make sure InsertWithAss only invoke with Build function
+		// use vs[0] because we can make sure insertAss only invoke with Build function
 		// which means there's only one factory value
 		// so that each associations only allow one value
 		fieldName := b.f.tagToInfo[name].fieldName
 		if err := setField(b.v, fieldName, vals[0], "InsertWithAss"); err != nil {
-			b.errors = append(b.errors, err)
-			return b.f.empty, nil, genFinalError(b.errors)
+			return err
 		}
 	}
 
-	// insert the factory value
-	v, err := b.Insert()
-	if err != nil {
-		b.errors = append(b.errors, err)
-		return b.f.empty, nil, err
-	}
+	// clear associations
+	b.f.associations = map[string][]interface{}{}
 
-	return v, assVals, nil
+	return nil
 }
 
-// InsertListWithAss inserts the list of values with the associations into the database
-func (b *builderList[T]) InsertWithAss() ([]T, []interface{}, error) {
-	if len(b.errors) > 0 {
-		return nil, nil, genFinalError(b.errors)
-	}
-
-	// generate and insert
-	assVals, err := genAndInsertAss(b.ctx, b.f.db, b.f.associations, b.f.tagToInfo)
-	if err != nil {
-		b.errors = append(b.errors, err)
-		return nil, nil, genFinalError(b.errors)
+// setAss sets and inserts the associations
+func (b *builderList[T]) setAss() error {
+	// insert the associations
+	if err := insertAss(b.ctx, b.f.db, b.f.associations, b.f.tagToInfo); err != nil {
+		return err
 	}
 
 	// set the connection between the factory value and the associations
@@ -589,18 +586,13 @@ func (b *builderList[T]) InsertWithAss() ([]T, []interface{}, error) {
 
 			fieldName := b.f.tagToInfo[name].fieldName
 			if err := setField(l, fieldName, v, "InsertWithAss"); err != nil {
-				b.errors = append(b.errors, err)
-				return nil, nil, genFinalError(b.errors)
+				return err
 			}
 		}
 	}
 
-	// insert the factory value
-	v, err := b.Insert()
-	if err != nil {
-		b.errors = append(b.errors, err)
-		return nil, nil, genFinalError(b.errors)
-	}
+	// clear associations
+	b.f.associations = map[string][]interface{}{}
 
-	return v, assVals, nil
+	return nil
 }

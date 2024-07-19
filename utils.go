@@ -239,31 +239,6 @@ func setField(target interface{}, name string, source interface{}, sourceFn stri
 	return nil
 }
 
-// genAndInsertAss inserts the associations value into the database and returns with the inserted values
-func genAndInsertAss(ctx context.Context, d db.Database, associations map[string][]interface{}, tagToInfo map[string]tagInfo) ([]interface{}, error) {
-	if len(tagToInfo) == 0 {
-		return nil, errors.New("tagToInfo is not set")
-	}
-
-	if len(associations) == 0 {
-		return nil, errors.New("inserting associations without any associations")
-	}
-
-	result := []interface{}{}
-	for name, vals := range associations {
-		tableName := tagToInfo[name].tableName
-
-		v, err := d.InsertList(ctx, db.InserListParams{StorageName: tableName, Values: vals})
-		if err != nil {
-			return nil, err
-		}
-
-		result = append(result, v...)
-	}
-
-	return result, nil
-}
-
 // setAssValue sets the value to the associations value
 func setAssValue(v interface{}, tagToInfo map[string]tagInfo, index int, sourceFn string) error {
 	typeOfV := reflect.TypeOf(v)
@@ -286,6 +261,26 @@ func setAssValue(v interface{}, tagToInfo map[string]tagInfo, index int, sourceF
 	}
 
 	setNonZeroValues(index, v, nil)
+	return nil
+}
+
+// genAndInsertAss inserts the associations value into the database
+func insertAss(ctx context.Context, d db.Database, associations map[string][]interface{}, tagToInfo map[string]tagInfo) error {
+	if len(tagToInfo) == 0 {
+		return errors.New("tagToInfo is not set")
+	}
+
+	if len(associations) == 0 {
+		return errors.New("inserting associations without any associations")
+	}
+
+	for name, vals := range associations {
+		tableName := tagToInfo[name].tableName
+		if _, err := d.InsertList(ctx, db.InserListParams{StorageName: tableName, Values: vals}); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
