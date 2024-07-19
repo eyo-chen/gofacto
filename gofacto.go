@@ -43,6 +43,7 @@ type Config[T any] struct {
 	IsSetZeroValue *bool
 }
 
+// Factory is the gofacto factory to create mock data
 type Factory[T any] struct {
 	db             db.Database
 	bluePrint      bluePrintFunc[T]
@@ -68,7 +69,7 @@ type Factory[T any] struct {
 // bluePrintFunc is a client-defined function to create a new value
 type bluePrintFunc[T any] func(i int, last T) T
 
-// SetTrait is a client-defined function to add a trait to mutate the value
+// setTraiter is a client-defined function to add a trait to mutate the value
 type setTraiter[T any] func(v *T)
 
 // tagInfo is the metadata for the tag
@@ -91,6 +92,7 @@ type builderList[T any] struct {
 	f      *Factory[T]
 }
 
+// New creates a new gofacto factory
 func New[T any](v T) *Factory[T] {
 	dataType := reflect.TypeOf(v)
 
