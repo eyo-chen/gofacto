@@ -1,12 +1,14 @@
 package db
 
+import "context"
+
 // Database is responsible for inserting data into the database
 type Database interface {
 	// insert inserts a single data into the database
-	Insert(InserParams) (interface{}, error)
+	Insert(context.Context, InserParams) (interface{}, error)
 
 	// insertList inserts a list of data into the database
-	InsertList(InserListParams) ([]interface{}, error)
+	InsertList(context.Context, InserListParams) ([]interface{}, error)
 }
 
 // InsertParams is a struct that holds the parameters for the Insert method

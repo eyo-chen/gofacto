@@ -2,6 +2,7 @@ package gofacto
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"reflect"
@@ -93,38 +94,31 @@ func setNonZeroValues(i int, v interface{}, ignoreFields []string) {
 			continue
 		}
 
-		// If the field is a struct, recursively set non-zero values for its fields
+		// handle struct
 		if curField.Type.Kind() == reflect.Struct {
 			setNonZeroValues(i, curVal.Addr().Interface(), ignoreFields)
 			continue
 		}
 
-		// If the field is a pointer, create a new instance of the pointed-to struct type and set its non-zero values
+		// handle pointer to struct
 		if curField.Type.Kind() == reflect.Ptr && curField.Type.Elem().Kind() == reflect.Struct {
-			if curVal.IsNil() {
-				newInstance := reflect.New(curField.Type.Elem()).Elem()
-				setNonZeroValues(i, newInstance.Addr().Interface(), ignoreFields)
-				curVal.Set(newInstance.Addr())
-			} else {
-				setNonZeroValues(i, curVal.Interface(), ignoreFields)
-			}
+			newInstance := reflect.New(curField.Type.Elem()).Elem()
+			setNonZeroValues(i, newInstance.Addr().Interface(), ignoreFields)
+			curVal.Set(newInstance.Addr())
 			continue
 		}
 
-		// If the field is a slice
+		// handle slice
 		if curField.Type.Kind() == reflect.Slice {
 			setNonZeroValuesForSlice(i, curVal.Addr().Interface(), ignoreFields)
 			continue
 		}
 
+		// handle pointer to slice
 		if curField.Type.Kind() == reflect.Ptr && curField.Type.Elem().Kind() == reflect.Slice {
-			if curVal.IsNil() {
-				newInstance := reflect.New(curField.Type.Elem()).Elem()
-				setNonZeroValuesForSlice(i, newInstance.Addr().Interface(), ignoreFields)
-				curVal.Set(newInstance.Addr())
-			} else {
-				setNonZeroValuesForSlice(i, curVal.Interface(), ignoreFields)
-			}
+			newInstance := reflect.New(curField.Type.Elem()).Elem()
+			setNonZeroValuesForSlice(i, newInstance.Addr().Interface(), ignoreFields)
+			curVal.Set(newInstance.Addr())
 			continue
 		}
 
@@ -135,8 +129,8 @@ func setNonZeroValues(i int, v interface{}, ignoreFields []string) {
 	}
 }
 
-// setNonZeroValuesForSlice sets non-zero values to the given slice
-// v must be a pointer to a slice
+// setNonZeroValuesForSlice sets non-zero values to the given slice.
+// Parameter v must be a pointer to a slice
 func setNonZeroValuesForSlice(i int, v interface{}, ignoreFields []string) {
 	val := reflect.ValueOf(v).Elem()
 
@@ -238,53 +232,12 @@ func setField(target interface{}, name string, source interface{}, sourceFn stri
 	}
 
 	sourceIDKind := sourceIDField.Kind()
-	if sourceIDKind != reflect.Int &&
-		sourceIDKind != reflect.Int64 &&
-		sourceIDKind != reflect.Int32 &&
-		sourceIDKind != reflect.Int16 &&
-		sourceIDKind != reflect.Int8 &&
-		sourceIDKind != reflect.Uint &&
-		sourceIDKind != reflect.Uint64 &&
-		sourceIDKind != reflect.Uint32 &&
-		sourceIDKind != reflect.Uint16 &&
-		sourceIDKind != reflect.Uint8 {
+	if !isIntType(sourceIDKind) && !isUintType(sourceIDKind) {
 		return fmt.Errorf("%s: source field ID is not an integer", sourceFn)
 	}
 
-	// TODO: What if targetField is int, but sourceIDField is uint?
-	switch sourceIDField.Kind() {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		targetField.SetInt(sourceIDField.Int())
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		targetField.SetUint(sourceIDField.Uint())
-	}
-
+	setFieldValue(targetField, sourceIDField)
 	return nil
-}
-
-// genAndInsertAss inserts the associations value into the database and returns with the inserted values
-func genAndInsertAss(d db.Database, associations map[string][]interface{}, tagToInfo map[string]tagInfo) ([]interface{}, error) {
-	if len(tagToInfo) == 0 {
-		return nil, errors.New("tagToInfo is not set")
-	}
-
-	if len(associations) == 0 {
-		return nil, errors.New("inserting associations without any associations")
-	}
-
-	result := []interface{}{}
-	for name, vals := range associations {
-		tableName := tagToInfo[name].tableName
-
-		v, err := d.InsertList(db.InserListParams{StorageName: tableName, Values: vals})
-		if err != nil {
-			return nil, err
-		}
-
-		result = append(result, v...)
-	}
-
-	return result, nil
 }
 
 // setAssValue sets the value to the associations value
@@ -309,6 +262,26 @@ func setAssValue(v interface{}, tagToInfo map[string]tagInfo, index int, sourceF
 	}
 
 	setNonZeroValues(index, v, nil)
+	return nil
+}
+
+// genAndInsertAss inserts the associations value into the database
+func insertAss(ctx context.Context, d db.Database, associations map[string][]interface{}, tagToInfo map[string]tagInfo) error {
+	if len(tagToInfo) == 0 {
+		return errors.New("tagToInfo is not set")
+	}
+
+	if len(associations) == 0 {
+		return errors.New("inserting associations without any associations")
+	}
+
+	for name, vals := range associations {
+		tableName := tagToInfo[name].tableName
+		if _, err := d.InsertList(ctx, db.InserListParams{StorageName: tableName, Values: vals}); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -358,4 +331,37 @@ func camelToSnake(input string) string {
 	}
 
 	return buf.String()
+}
+
+// setFieldValue sets the value of the source to the target,
+// and it also handles the conversion between int and uint.
+// Normally, it's used to set the ID field of the target struct
+func setFieldValue(target, source reflect.Value) {
+	targetKind := target.Kind()
+	sourceKind := source.Kind()
+
+	if isIntType(targetKind) && isIntType(sourceKind) {
+		target.SetInt(source.Int())
+		return
+	}
+
+	if isUintType(targetKind) && isUintType(sourceKind) {
+		target.SetUint(source.Uint())
+		return
+	}
+
+	if isIntType(targetKind) {
+		target.SetInt(int64(source.Uint()))
+		return
+	}
+
+	target.SetUint(uint64(source.Int()))
+}
+
+func isIntType(k reflect.Kind) bool {
+	return k >= reflect.Int && k <= reflect.Int64
+}
+
+func isUintType(k reflect.Kind) bool {
+	return k >= reflect.Uint && k <= reflect.Uint64
 }

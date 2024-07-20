@@ -1,6 +1,7 @@
 package gofacto
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -9,7 +10,8 @@ import (
 )
 
 var (
-	now = time.Now()
+	now     = time.Now()
+	mockCTX = context.Background()
 )
 
 type testStruct struct {
@@ -145,7 +147,7 @@ func build_BluePrintAllFields(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			got, err := f.Build().Get()
+			got, err := f.Build(mockCTX).Get()
 			if err != nil {
 				t.Errorf("error from gofacto: %v", err)
 			}
@@ -205,7 +207,7 @@ func build_BluePrintSomeFields(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			got, err := f.Build().Get()
+			got, err := f.Build(mockCTX).Get()
 			if err != nil {
 				t.Errorf("error from gofacto: %v", err)
 			}
@@ -269,7 +271,7 @@ func build_BluePrintNotSetZeroValues(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			got, err := f.Build().Get()
+			got, err := f.Build(mockCTX).Get()
 			if err != nil {
 				t.Errorf("error from gofacto: %v", err)
 			}
@@ -298,7 +300,7 @@ func build_NoBluePrint(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			got, err := f.Build().Get()
+			got, err := f.Build(mockCTX).Get()
 			if err != nil {
 				t.Errorf("error from gofacto: %v", err)
 			}
@@ -329,7 +331,7 @@ func build_NoBluePrintNotSetZeroValues(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			got, err := f.Build().Get()
+			got, err := f.Build(mockCTX).Get()
 			if err != nil {
 				t.Errorf("error from gofacto: %v", err)
 			}
@@ -364,7 +366,7 @@ func build_IgnoreFields(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			got, err := f.Build().Get()
+			got, err := f.Build(mockCTX).Get()
 			if err != nil {
 				t.Errorf("error from gofacto: %v", err)
 			}
@@ -529,7 +531,7 @@ func buildList_BluePrintAllFields(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			got, err := f.BuildList(2).Get()
+			got, err := f.BuildList(mockCTX, 2).Get()
 			if err != nil {
 				t.Errorf("error from gofacto: %v", err)
 			}
@@ -600,7 +602,7 @@ func buildList_BluePrintSomeFields(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			got, err := f.BuildList(2).Get()
+			got, err := f.BuildList(mockCTX, 2).Get()
 			if err != nil {
 				t.Errorf("error from gofacto: %v", err)
 			}
@@ -675,7 +677,7 @@ func buildList_BluePrintNotSetZeroValues(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			got, err := f.BuildList(2).Get()
+			got, err := f.BuildList(mockCTX, 2).Get()
 			if err != nil {
 				t.Errorf("error from gofacto: %v", err)
 			}
@@ -703,7 +705,7 @@ func buildList_NoBluePrintNotSetZeroValues(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			got, err := f.BuildList(2).Get()
+			got, err := f.BuildList(mockCTX, 2).Get()
 			if err != nil {
 				t.Errorf("error from gofacto: %v", err)
 			}
@@ -734,7 +736,7 @@ func buildList_NoBluePrint(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			got, err := f.BuildList(2).Get()
+			got, err := f.BuildList(mockCTX, 2).Get()
 			if err != nil {
 				t.Errorf("error from gofacto: %v", err)
 			}
@@ -796,7 +798,7 @@ func overwrite_OnBuilder(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			got, err := f.Build().Overwrite(tt.ow).Get()
+			got, err := f.Build(mockCTX).Overwrite(tt.ow).Get()
 			if err != nil {
 				t.Errorf("error from gofacto: %v", err)
 			}
@@ -902,7 +904,7 @@ func overwrite_OnBuilderList(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			got, err := f.BuildList(2).Overwrites(tt.ow...).Get()
+			got, err := f.BuildList(mockCTX, 2).Overwrites(tt.ow...).Get()
 			if err != nil {
 				t.Errorf("error from gofacto: %v", err)
 			}
@@ -966,7 +968,7 @@ func overwrite_OnBuilderListOneValue(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			got, err := f.BuildList(2).Overwrite(tt.ow).Get()
+			got, err := f.BuildList(mockCTX, 2).Overwrite(tt.ow).Get()
 			if err != nil {
 				t.Errorf("error from gofacto: %v", err)
 			}
@@ -1036,7 +1038,7 @@ func withTrait_OnBuilder(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			got, err := f.Build().WithTrait(tt.trait).Get()
+			got, err := f.Build(mockCTX).WithTrait(tt.trait).Get()
 
 			if tt.hasError {
 				if err == nil {
@@ -1153,7 +1155,7 @@ func withTrait_OnBuilderList(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			got, err := f.BuildList(2).WithTraits(tt.taits...).Get()
+			got, err := f.BuildList(mockCTX, 2).WithTraits(tt.taits...).Get()
 
 			if tt.hasError {
 				if err == nil {
@@ -1230,7 +1232,7 @@ func withTrait_OnBuilderListOneValue(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			got, err := f.BuildList(2).WithTrait(tt.tait).Get()
+			got, err := f.BuildList(mockCTX, 2).WithTrait(tt.tait).Get()
 
 			if tt.hasError {
 				if err == nil {
@@ -1310,7 +1312,7 @@ func withTrait_OnBuilderMultiple(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			got, err := f.Build().WithTrait(tt.taits[0]).WithTrait(tt.taits[1]).Get()
+			got, err := f.Build(mockCTX).WithTrait(tt.taits[0]).WithTrait(tt.taits[1]).Get()
 
 			if tt.hasError {
 				if err == nil {
@@ -1411,7 +1413,7 @@ func setZero_OnBuilderWithBluePrint(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			got, err := f.Build().SetZero(tt.setZeroFields...).Get()
+			got, err := f.Build(mockCTX).SetZero(tt.setZeroFields...).Get()
 
 			if tt.hasError {
 				if err == nil {
@@ -1484,7 +1486,7 @@ func setZero_OnBuilderWithoutBluePrint(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			got, err := f.Build().SetZero(tt.setZeroFields...).Get()
+			got, err := f.Build(mockCTX).SetZero(tt.setZeroFields...).Get()
 
 			if tt.hasError {
 				if err == nil {
@@ -1581,7 +1583,7 @@ func setZero_OnBuilderListWithBluePrint(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			got, err := f.BuildList(2).SetZero(tt.index, tt.setZeroFields...).Get()
+			got, err := f.BuildList(mockCTX, 2).SetZero(tt.index, tt.setZeroFields...).Get()
 
 			if tt.hasErro {
 				if err == nil {
@@ -1661,7 +1663,7 @@ func setZero_OnBuilderListWithoutBluePrint(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			got, err := f.BuildList(2).SetZero(tt.index, tt.setZeroFields...).Get()
+			got, err := f.BuildList(mockCTX, 2).SetZero(tt.index, tt.setZeroFields...).Get()
 
 			if tt.hasErro {
 				if err == nil {
@@ -1734,7 +1736,7 @@ func setZero_OnBuilderMany(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			preF := f.Build()
+			preF := f.Build(mockCTX)
 			for _, fields := range tt.setZeroFields {
 				preF = preF.SetZero(fields...)
 			}
@@ -1833,7 +1835,7 @@ func setZero_OnBuilderListMany(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			preF := f.BuildList(tt.buildIndex)
+			preF := f.BuildList(mockCTX, tt.buildIndex)
 			for i, fields := range tt.setZeroFieldsByIndex {
 				preF = preF.SetZero(i, fields...)
 			}

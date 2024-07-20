@@ -1,6 +1,7 @@
 package gofacto
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"reflect"
@@ -43,6 +44,7 @@ type Config[T any] struct {
 	IsSetZeroValue *bool
 }
 
+// Factory is the gofacto factory to create mock data
 type Factory[T any] struct {
 	db             db.Database
 	bluePrint      bluePrintFunc[T]
@@ -68,7 +70,7 @@ type Factory[T any] struct {
 // bluePrintFunc is a client-defined function to create a new value
 type bluePrintFunc[T any] func(i int, last T) T
 
-// SetTrait is a client-defined function to add a trait to mutate the value
+// setTraiter is a client-defined function to add a trait to mutate the value
 type setTraiter[T any] func(v *T)
 
 // tagInfo is the metadata for the tag
@@ -79,6 +81,7 @@ type tagInfo struct {
 
 // builder is for building a single value
 type builder[T any] struct {
+	ctx    context.Context
 	v      *T
 	errors []error
 	f      *Factory[T]
@@ -86,11 +89,13 @@ type builder[T any] struct {
 
 // builderList is for building a list of values
 type builderList[T any] struct {
+	ctx    context.Context
 	list   []*T
 	errors []error
 	f      *Factory[T]
 }
 
+// New creates a new gofacto factory
 func New[T any](v T) *Factory[T] {
 	dataType := reflect.TypeOf(v)
 
@@ -139,7 +144,7 @@ func (f *Factory[T]) Reset() {
 }
 
 // Build builds a value
-func (f *Factory[T]) Build() *builder[T] {
+func (f *Factory[T]) Build(ctx context.Context) *builder[T] {
 	var v T
 	if f.bluePrint != nil {
 		v = f.bluePrint(f.index, v)
@@ -159,7 +164,7 @@ func (f *Factory[T]) Build() *builder[T] {
 }
 
 // BuildList creates a list of n values
-func (f *Factory[T]) BuildList(n int) *builderList[T] {
+func (f *Factory[T]) BuildList(ctx context.Context, n int) *builderList[T] {
 	list := make([]*T, n)
 	errs := []error{}
 	if n < 1 {
@@ -213,24 +218,28 @@ func (b *builderList[T]) Get() ([]T, error) {
 
 // Insert inserts the value into the database
 func (b *builder[T]) Insert() (T, error) {
-	if b.f.db == nil {
-		b.errors = append(b.errors, errors.New("Insert: DB is not provided"))
-	}
-
 	if len(b.errors) > 0 {
 		return b.f.empty, genFinalError(b.errors)
 	}
 
-	val, err := b.f.db.Insert(db.InserParams{StorageName: b.f.storageName, Value: b.v})
+	if b.f.db == nil {
+		return b.f.empty, errors.New("DB connection is not provided")
+	}
+
+	if len(b.f.associations) > 0 {
+		if err := b.setAss(); err != nil {
+			return b.f.empty, err
+		}
+	}
+
+	val, err := b.f.db.Insert(b.ctx, db.InserParams{StorageName: b.f.storageName, Value: b.v})
 	if err != nil {
-		b.errors = append(b.errors, err)
-		return b.f.empty, genFinalError(b.errors)
+		return b.f.empty, err
 	}
 
 	v, ok := val.(*T)
 	if !ok {
-		b.errors = append(b.errors, fmt.Errorf("Insert: can't convert to pointer"))
-		return b.f.empty, genFinalError(b.errors)
+		return b.f.empty, errors.New("Insert: can't convert to pointer")
 	}
 
 	return *v, nil
@@ -238,12 +247,18 @@ func (b *builder[T]) Insert() (T, error) {
 
 // Insert inserts the list of values into the database
 func (b *builderList[T]) Insert() ([]T, error) {
-	if b.f.db == nil {
-		b.errors = append(b.errors, errors.New("Insert: DB is not provided"))
-	}
-
 	if len(b.errors) > 0 {
 		return nil, genFinalError(b.errors)
+	}
+
+	if b.f.db == nil {
+		return nil, errors.New("DB connection is not provided")
+	}
+
+	if len(b.f.associations) > 0 {
+		if err := b.setAss(); err != nil {
+			return nil, err
+		}
 	}
 
 	// convert to any type
@@ -251,10 +266,9 @@ func (b *builderList[T]) Insert() ([]T, error) {
 	for i, v := range b.list {
 		input[i] = v
 	}
-	vals, err := b.f.db.InsertList(db.InserListParams{StorageName: b.f.storageName, Values: input})
+	vals, err := b.f.db.InsertList(b.ctx, db.InserListParams{StorageName: b.f.storageName, Values: input})
 	if err != nil {
-		b.errors = append(b.errors, err)
-		return nil, genFinalError(b.errors)
+		return nil, err
 	}
 
 	// convert to []T
@@ -262,8 +276,7 @@ func (b *builderList[T]) Insert() ([]T, error) {
 	for i, val := range vals {
 		v, ok := val.(*T)
 		if !ok {
-			b.errors = append(b.errors, fmt.Errorf("Insert: can't convert to pointer"))
-			return nil, genFinalError(b.errors)
+			return nil, errors.New("Insert: can't convert to pointer")
 		}
 
 		output[i] = *v
@@ -520,52 +533,35 @@ func (b *builderList[T]) WithMany(values ...interface{}) *builderList[T] {
 	return b
 }
 
-// InsertWithAss inserts the value with the associations into the database
-func (b *builder[T]) InsertWithAss() (T, []interface{}, error) {
-	if len(b.errors) > 0 {
-		return b.f.empty, nil, genFinalError(b.errors)
-	}
-
-	// generate and insert the associations
-	assVals, err := genAndInsertAss(b.f.db, b.f.associations, b.f.tagToInfo)
-	if err != nil {
-		b.errors = append(b.errors, err)
-		return b.f.empty, nil, genFinalError(b.errors)
+// setAss sets and inserts the associations
+func (b *builder[T]) setAss() error {
+	// insert the associations
+	if err := insertAss(b.ctx, b.f.db, b.f.associations, b.f.tagToInfo); err != nil {
+		return err
 	}
 
 	// set the connection between the factory value and the associations
 	for name, vals := range b.f.associations {
-		// use vs[0] because we can make sure InsertWithAss only invoke with Build function
+		// use vs[0] because we can make sure insertAss only invoke with Build function
 		// which means there's only one factory value
 		// so that each associations only allow one value
 		fieldName := b.f.tagToInfo[name].fieldName
 		if err := setField(b.v, fieldName, vals[0], "InsertWithAss"); err != nil {
-			b.errors = append(b.errors, err)
-			return b.f.empty, nil, genFinalError(b.errors)
+			return err
 		}
 	}
 
-	// insert the factory value
-	v, err := b.Insert()
-	if err != nil {
-		b.errors = append(b.errors, err)
-		return b.f.empty, nil, err
-	}
+	// clear associations
+	b.f.associations = map[string][]interface{}{}
 
-	return v, assVals, nil
+	return nil
 }
 
-// InsertListWithAss inserts the list of values with the associations into the database
-func (b *builderList[T]) InsertWithAss() ([]T, []interface{}, error) {
-	if len(b.errors) > 0 {
-		return nil, nil, genFinalError(b.errors)
-	}
-
-	// generate and insert
-	assVals, err := genAndInsertAss(b.f.db, b.f.associations, b.f.tagToInfo)
-	if err != nil {
-		b.errors = append(b.errors, err)
-		return nil, nil, genFinalError(b.errors)
+// setAss sets and inserts the associations
+func (b *builderList[T]) setAss() error {
+	// insert the associations
+	if err := insertAss(b.ctx, b.f.db, b.f.associations, b.f.tagToInfo); err != nil {
+		return err
 	}
 
 	// set the connection between the factory value and the associations
@@ -584,18 +580,13 @@ func (b *builderList[T]) InsertWithAss() ([]T, []interface{}, error) {
 
 			fieldName := b.f.tagToInfo[name].fieldName
 			if err := setField(l, fieldName, v, "InsertWithAss"); err != nil {
-				b.errors = append(b.errors, err)
-				return nil, nil, genFinalError(b.errors)
+				return err
 			}
 		}
 	}
 
-	// insert the factory value
-	v, err := b.Insert()
-	if err != nil {
-		b.errors = append(b.errors, err)
-		return nil, nil, genFinalError(b.errors)
-	}
+	// clear associations
+	b.f.associations = map[string][]interface{}{}
 
-	return v, assVals, nil
+	return nil
 }
