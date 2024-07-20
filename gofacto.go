@@ -440,7 +440,7 @@ func (b *builderList[T]) SetZero(i int, fields ...string) *builderList[T] {
 }
 
 // WihtOne set one association to the factory value
-func (b *builder[T]) WithOne(v interface{}) *builder[T] {
+func (b *builder[T]) WithOne(v interface{}, ignoreFields ...string) *builder[T] {
 	if len(b.errors) > 0 {
 		return b
 	}
@@ -455,7 +455,7 @@ func (b *builder[T]) WithOne(v interface{}) *builder[T] {
 		b.f.tagToInfo = t
 	}
 
-	if err := setAssValue(v, b.f.tagToInfo, b.f.index, "WithOne"); err != nil {
+	if err := setAssValue(v, b.f.tagToInfo, b.f.index, "WithOne", ignoreFields); err != nil {
 		b.errors = append(b.errors, err)
 		return b
 	}
@@ -467,7 +467,7 @@ func (b *builder[T]) WithOne(v interface{}) *builder[T] {
 }
 
 // WihtOne set one association to the factory value
-func (b *builderList[T]) WithOne(v interface{}) *builderList[T] {
+func (b *builderList[T]) WithOne(v interface{}, ignoreFields ...string) *builderList[T] {
 	if len(b.errors) > 0 {
 		return b
 	}
@@ -482,7 +482,7 @@ func (b *builderList[T]) WithOne(v interface{}) *builderList[T] {
 		b.f.tagToInfo = t
 	}
 
-	if err := setAssValue(v, b.f.tagToInfo, b.f.index, "WithOne"); err != nil {
+	if err := setAssValue(v, b.f.tagToInfo, b.f.index, "WithOne", ignoreFields); err != nil {
 		b.errors = append(b.errors, err)
 		return b
 	}
@@ -494,7 +494,7 @@ func (b *builderList[T]) WithOne(v interface{}) *builderList[T] {
 }
 
 // WithMany set many associations to the factory value
-func (b *builderList[T]) WithMany(values ...interface{}) *builderList[T] {
+func (b *builderList[T]) WithMany(values []interface{}, ignoreFields ...string) *builderList[T] {
 	if len(b.errors) > 0 {
 		return b
 	}
@@ -511,7 +511,7 @@ func (b *builderList[T]) WithMany(values ...interface{}) *builderList[T] {
 
 	var curValName string
 	for _, v := range values {
-		if err := setAssValue(v, b.f.tagToInfo, b.f.index, "WithMany"); err != nil {
+		if err := setAssValue(v, b.f.tagToInfo, b.f.index, "WithMany", ignoreFields); err != nil {
 			b.errors = append(b.errors, err)
 			return b
 		}
