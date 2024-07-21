@@ -241,7 +241,7 @@ func setField(target interface{}, name string, source interface{}, sourceFn stri
 }
 
 // setAssValue sets the value to the associations value
-func setAssValue(v interface{}, tagToInfo map[string]tagInfo, index int, sourceFn string) error {
+func setAssValue(v interface{}, tagToInfo map[string]tagInfo, index int, sourceFn string, ignoreFields []string) error {
 	typeOfV := reflect.TypeOf(v)
 
 	// check if it's a pointer
@@ -261,7 +261,7 @@ func setAssValue(v interface{}, tagToInfo map[string]tagInfo, index int, sourceF
 		return fmt.Errorf("%s: type %s, value %v is not found at tag", sourceFn, name, v)
 	}
 
-	setNonZeroValues(index, v, nil)
+	setNonZeroValues(index, v, ignoreFields)
 	return nil
 }
 
