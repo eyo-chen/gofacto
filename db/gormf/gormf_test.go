@@ -1,8 +1,7 @@
-package sqlf
+package gormf
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log"
 	"os"
@@ -14,7 +13,8 @@ import (
 	"github.com/eyo-chen/gofacto/internal/docker"
 	"github.com/eyo-chen/gofacto/internal/testutils"
 	"github.com/eyo-chen/gofacto/utils"
-	_ "github.com/go-sql-driver/mysql"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
 var (
@@ -55,7 +55,7 @@ type Book struct {
 }
 
 type testingSuite struct {
-	db      *sql.DB
+	db      *gorm.DB
 	authorF *gofacto.Factory[Author]
 	bookF   *gofacto.Factory[Book]
 }
@@ -63,13 +63,14 @@ type testingSuite struct {
 func (s *testingSuite) setupSuite() {
 	// Start MySQL Docker container
 	port := docker.RunDocker(docker.ImageMySQL)
-	dba, err := sql.Open("mysql", fmt.Sprintf("root:root@(localhost:%s)/mysql?parseTime=true", port))
+	dsn := fmt.Sprintf("root:root@(localhost:%s)/mysql?parseTime=true", port)
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Fatalf("sql.Open failed: %s", err)
+		log.Fatalf("gorm.Open failed: %s", err)
 	}
 
 	// Set the database connection
-	s.db = dba
+	s.db = db
 
 	// Read SQL file
 	schema, err := os.ReadFile("schema.sql")
@@ -86,22 +87,23 @@ func (s *testingSuite) setupSuite() {
 		if query == "" {
 			continue
 		}
-		if _, err := dba.Exec(query); err != nil {
+		if err := db.Exec(query).Error; err != nil {
 			log.Fatalf("Failed to execute query: %s, error: %s", query, err)
 		}
 	}
 
 	// Set up gofacto factories
 	s.authorF = gofacto.New(Author{}).SetConfig(gofacto.Config[Author]{
-		DB: &Config{DB: s.db},
+		DB: &Config{DB: db},
 	})
 	s.bookF = gofacto.New(Book{}).SetConfig(gofacto.Config[Book]{
-		DB: &Config{DB: s.db},
+		DB: &Config{DB: db},
 	})
 }
 
 func (s *testingSuite) tearDownSuite() {
-	s.db.Close()
+	sqlDB, _ := s.db.DB()
+	sqlDB.Close()
 	docker.PurgeDocker()
 }
 
@@ -148,26 +150,9 @@ func (s *testingSuite) TestInsert(t *testing.T) {
 	}
 
 	// verify the inserted data
-	stmt := "SELECT * FROM authors WHERE id = ?"
-	row := s.db.QueryRow(stmt, mockAuthor.ID)
 	var author Author
-	if err := row.Scan(
-		&author.ID,
-		&author.FirstName,
-		&author.LastName,
-		&author.BirthDate,
-		&author.Nationality,
-		&author.Email,
-		&author.Biography,
-		&author.IsActive,
-		&author.Rating,
-		&author.BooksWritten,
-		&author.LastPublicationTime,
-		&author.WebsiteURL,
-		&author.FanCount,
-		&author.ProfilePicture,
-	); err != nil {
-		t.Fatalf("Failed to scan author: %s", err)
+	if err := s.db.First(&author, mockAuthor.ID).Error; err != nil {
+		t.Fatalf("Failed to find author: %s", err)
 	}
 
 	// assertion
@@ -180,40 +165,13 @@ func (s *testingSuite) TestInsertList(t *testing.T) {
 	// prepare mock data
 	mockAuthors, err := s.authorF.BuildList(mockCTX, 3).Insert()
 	if err != nil {
-		t.Fatalf("Failed to insert books: %s", err)
+		t.Fatalf("Failed to insert authors: %s", err)
 	}
 
 	// verify the inserted data
-	stmt := "SELECT * FROM authors"
-	rows, err := s.db.Query(stmt)
-	if err != nil {
-		t.Fatalf("Failed to query authors: %s", err)
-	}
-	defer rows.Close()
-
 	var authors []Author
-	for rows.Next() {
-		var author Author
-		if err := rows.Scan(
-			&author.ID,
-			&author.FirstName,
-			&author.LastName,
-			&author.BirthDate,
-			&author.Nationality,
-			&author.Email,
-			&author.Biography,
-			&author.IsActive,
-			&author.Rating,
-			&author.BooksWritten,
-			&author.LastPublicationTime,
-			&author.WebsiteURL,
-			&author.FanCount,
-			&author.ProfilePicture,
-		); err != nil {
-			t.Fatalf("Failed to scan author: %s", err)
-		}
-
-		authors = append(authors, author)
+	if err := s.db.Find(&authors).Error; err != nil {
+		t.Fatalf("Failed to find authors: %s", err)
 	}
 
 	// assertion
@@ -233,47 +191,14 @@ func (s *testingSuite) TestWithOne(t *testing.T) {
 	}
 
 	// verify the inserted data
-	bookStmt := "SELECT * FROM books WHERE author_id = ?"
-	bookRow := s.db.QueryRow(bookStmt, mockBook.AuthorID)
 	var book Book
-	if err := bookRow.Scan(
-		&book.ID,
-		&book.AuthorID,
-		&book.Title,
-		&book.ISBN,
-		&book.PublicationDate,
-		&book.Genre,
-		&book.Price,
-		&book.PageCount,
-		&book.Description,
-		&book.InStock,
-		&book.CoverImage,
-		&book.CreatedAt,
-		&book.UpdatedAt,
-	); err != nil {
-		t.Fatalf("Failed to scan book: %s", err)
+	if err := s.db.Where("author_id = ?", mockBook.AuthorID).First(&book).Error; err != nil {
+		t.Fatalf("Failed to find book: %s", err)
 	}
 
-	authorStmt := "SELECT * FROM authors WHERE id = ?"
-	authorRow := s.db.QueryRow(authorStmt, mockBook.AuthorID)
 	var author Author
-	if err := authorRow.Scan(
-		&author.ID,
-		&author.FirstName,
-		&author.LastName,
-		&author.BirthDate,
-		&author.Nationality,
-		&author.Email,
-		&author.Biography,
-		&author.IsActive,
-		&author.Rating,
-		&author.BooksWritten,
-		&author.LastPublicationTime,
-		&author.WebsiteURL,
-		&author.FanCount,
-		&author.ProfilePicture,
-	); err != nil {
-		t.Fatalf("Failed to scan author: %s", err)
+	if err := s.db.First(&author, mockBook.AuthorID).Error; err != nil {
+		t.Fatalf("Failed to find author: %s", err)
 	}
 
 	// assertion
@@ -299,49 +224,15 @@ func (s *testingSuite) TestWithMany(t *testing.T) {
 	mockAuthors := utils.CvtToT[Author](mockAnyAuthors)
 
 	// verify the inserted data
-	bookStmt := "SELECT * FROM books WHERE author_id = ?"
-	authorStmt := "SELECT * FROM authors WHERE id = ?"
-
 	for i := 0; i < 3; i++ {
-		bookRow := s.db.QueryRow(bookStmt, mockBooks[i].AuthorID)
 		var book Book
-		if err := bookRow.Scan(
-			&book.ID,
-			&book.AuthorID,
-			&book.Title,
-			&book.ISBN,
-			&book.PublicationDate,
-			&book.Genre,
-			&book.Price,
-			&book.PageCount,
-			&book.Description,
-			&book.InStock,
-			&book.CoverImage,
-			&book.CreatedAt,
-			&book.UpdatedAt,
-		); err != nil {
-			t.Fatalf("Failed to scan book: %s", err)
+		if err := s.db.Where("author_id = ?", mockBooks[i].AuthorID).First(&book).Error; err != nil {
+			t.Fatalf("Failed to find book: %s", err)
 		}
 
-		authorRow := s.db.QueryRow(authorStmt, mockBooks[i].AuthorID)
 		var author Author
-		if err := authorRow.Scan(
-			&author.ID,
-			&author.FirstName,
-			&author.LastName,
-			&author.BirthDate,
-			&author.Nationality,
-			&author.Email,
-			&author.Biography,
-			&author.IsActive,
-			&author.Rating,
-			&author.BooksWritten,
-			&author.LastPublicationTime,
-			&author.WebsiteURL,
-			&author.FanCount,
-			&author.ProfilePicture,
-		); err != nil {
-			t.Fatalf("Failed to scan author: %s", err)
+		if err := s.db.First(&author, mockBooks[i].AuthorID).Error; err != nil {
+			t.Fatalf("Failed to find author: %s", err)
 		}
 
 		// assertion
@@ -366,56 +257,14 @@ func (s *testingSuite) TestListWithOne(t *testing.T) {
 	}
 
 	// verify the inserted data
-	bookStmt := "SELECT * FROM books WHERE author_id = ?"
-	bookRows, err := s.db.Query(bookStmt, mockBooks[0].AuthorID)
-	if err != nil {
-		t.Fatalf("Failed to query books: %s", err)
-	}
-
 	var books []Book
-	for bookRows.Next() {
-		var book Book
-		if err := bookRows.Scan(
-			&book.ID,
-			&book.AuthorID,
-			&book.Title,
-			&book.ISBN,
-			&book.PublicationDate,
-			&book.Genre,
-			&book.Price,
-			&book.PageCount,
-			&book.Description,
-			&book.InStock,
-			&book.CoverImage,
-			&book.CreatedAt,
-			&book.UpdatedAt,
-		); err != nil {
-			t.Fatalf("Failed to scan book: %s", err)
-		}
-
-		books = append(books, book)
+	if err := s.db.Where("author_id = ?", mockBooks[0].AuthorID).Find(&books).Error; err != nil {
+		t.Fatalf("Failed to find books: %s", err)
 	}
 
-	authorStmt := "SELECT * FROM authors WHERE id = ?"
-	authorRow := s.db.QueryRow(authorStmt, mockBooks[0].AuthorID)
 	var author Author
-	if err := authorRow.Scan(
-		&author.ID,
-		&author.FirstName,
-		&author.LastName,
-		&author.BirthDate,
-		&author.Nationality,
-		&author.Email,
-		&author.Biography,
-		&author.IsActive,
-		&author.Rating,
-		&author.BooksWritten,
-		&author.LastPublicationTime,
-		&author.WebsiteURL,
-		&author.FanCount,
-		&author.ProfilePicture,
-	); err != nil {
-		t.Fatalf("Failed to scan author: %s", err)
+	if err := s.db.First(&author, mockBooks[0].AuthorID).Error; err != nil {
+		t.Fatalf("Failed to find author: %s", err)
 	}
 
 	// assertion
