@@ -1,9 +1,8 @@
-package sqlf
+package sqllib
 
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"reflect"
 	"strings"
 
@@ -11,15 +10,32 @@ import (
 	"github.com/eyo-chen/gofacto/internal/utils"
 )
 
+// SQLDialect defines the behavior for different SQL dialects
+type SQLDialect interface {
+	// GenPlaceholder generates a placeholder
+	GenPlaceholder(placeholderIdx int) string
+
+	// GenInsertStmt generates an insert statement
+	GenInsertStmt(tableName, fieldNames, placeholder string) string
+
+	// InsertToDB inserts the values to the database
+	InsertToDB(ctx context.Context, tx *sql.Tx, stmt *sql.Stmt, vals []interface{}) (int64, error)
+}
+
 // Config is for raw SQL database operations
 type Config struct {
 	// DB is the database connection
-	// must provide if want to insert data into the database
 	DB *sql.DB
+
+	// Dialect is the SQL dialect
+	Dialect SQLDialect
+
+	// PackageName is the package name
+	PackageName string
 }
 
 func (c *Config) Insert(ctx context.Context, params db.InserParams) (interface{}, error) {
-	rawStmt, vals := prepareStmtAndVals(params.StorageName, params.Value)
+	rawStmt, vals := c.prepareStmtAndVals(params.StorageName, params.Value)
 
 	// Prepare the insert statement
 	stmt, err := c.DB.Prepare(rawStmt)
@@ -34,7 +50,7 @@ func (c *Config) Insert(ctx context.Context, params db.InserParams) (interface{}
 	}
 	defer tx.Rollback()
 
-	id, err := insertToDB(ctx, tx, stmt, vals[0])
+	id, err := c.Dialect.InsertToDB(ctx, tx, stmt, vals[0])
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +64,7 @@ func (c *Config) Insert(ctx context.Context, params db.InserParams) (interface{}
 }
 
 func (c *Config) InsertList(ctx context.Context, params db.InserListParams) ([]interface{}, error) {
-	rawStmt, fieldValues := prepareStmtAndVals(params.StorageName, params.Values...)
+	rawStmt, fieldValues := c.prepareStmtAndVals(params.StorageName, params.Values...)
 
 	stmt, err := c.DB.Prepare(rawStmt)
 	if err != nil {
@@ -64,7 +80,7 @@ func (c *Config) InsertList(ctx context.Context, params db.InserListParams) ([]i
 
 	result := make([]interface{}, len(fieldValues))
 	for i, vals := range fieldValues {
-		id, err := insertToDB(ctx, tx, stmt, vals)
+		id, err := c.Dialect.InsertToDB(ctx, tx, stmt, vals)
 		if err != nil {
 			return nil, err
 		}
@@ -82,39 +98,9 @@ func (c *Config) InsertList(ctx context.Context, params db.InserListParams) ([]i
 	return result, nil
 }
 
-func (c *Config) SetIDField(v interface{}, i int) error {
-	if reflect.ValueOf(v).Kind() != reflect.Ptr {
-		return fmt.Errorf("SetIDField: argument must be a pointer")
-	}
-
-	if reflect.ValueOf(v).Elem().Kind() != reflect.Struct {
-		return fmt.Errorf("SetIDField: argument must be a pointer to a struct")
-	}
-
-	val := reflect.ValueOf(v).Elem()
-	idField := val.FieldByName("ID")
-
-	if !idField.IsValid() {
-		return fmt.Errorf("SetIDField: ID field not found")
-	}
-
-	if !idField.CanSet() {
-		return fmt.Errorf("SetIDField: ID field is not settable")
-	}
-
-	switch idField.Kind() {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		idField.SetInt(int64(i))
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		idField.SetUint(uint64(i))
-	}
-
-	return nil
-}
-
 // prepareStmtAndVals prepares the SQL insert statement and the values to be inserted
 // values are the pointer to the struct
-func prepareStmtAndVals(tableName string, values ...interface{}) (string, [][]interface{}) {
+func (c *Config) prepareStmtAndVals(tableName string, values ...interface{}) (string, [][]interface{}) {
 	fieldNames := []string{}
 	placeholders := []string{}
 	fieldValues := [][]interface{}{}
@@ -123,6 +109,7 @@ func prepareStmtAndVals(tableName string, values ...interface{}) (string, [][]in
 		val := reflect.ValueOf(val).Elem()
 		vals := []interface{}{}
 
+		placeholderIndex := 1
 		for i := 0; i < val.NumField(); i++ {
 			n := val.Type().Field(i).Name
 			if n == "ID" {
@@ -132,14 +119,16 @@ func prepareStmtAndVals(tableName string, values ...interface{}) (string, [][]in
 			vals = append(vals, val.Field(i).Interface())
 
 			if index == 0 {
-				fieldName := val.Type().Field(i).Tag.Get("sqlf")
+				fieldName := val.Type().Field(i).Tag.Get(c.PackageName)
 				if fieldName == "" {
 					fieldName = utils.CamelToSnake(n)
 				}
 
 				fieldNames = append(fieldNames, fieldName)
-				placeholders = append(placeholders, "?")
+				placeholders = append(placeholders, c.Dialect.GenPlaceholder(placeholderIndex))
 			}
+
+			placeholderIndex++
 		}
 
 		fieldValues = append(fieldValues, vals)
@@ -148,27 +137,9 @@ func prepareStmtAndVals(tableName string, values ...interface{}) (string, [][]in
 	// Construct the SQL insert statement
 	fns := strings.Join(fieldNames, ", ")
 	phs := strings.Join(placeholders, ", ")
-	rawStmt := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)", tableName, fns, phs)
+	rawStmt := c.Dialect.GenInsertStmt(tableName, fns, phs)
 
 	return rawStmt, fieldValues
-}
-
-// insertToDB inserts the given values to the database
-func insertToDB(ctx context.Context, tx *sql.Tx, stmt *sql.Stmt, vals []interface{}) (int64, error) {
-	var res sql.Result
-	var errSQL error
-
-	res, errSQL = tx.Stmt(stmt).ExecContext(ctx, vals...)
-	if errSQL != nil {
-		return 0, errSQL
-	}
-
-	id, err := res.LastInsertId()
-	if err != nil {
-		return 0, err
-	}
-
-	return id, nil
 }
 
 // setIDField sets the id value on ID field of the given value

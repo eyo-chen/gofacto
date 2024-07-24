@@ -1,4 +1,4 @@
-package sqlf
+package postgresf
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 	"github.com/eyo-chen/gofacto/internal/docker"
 	"github.com/eyo-chen/gofacto/internal/testutils"
 	"github.com/eyo-chen/gofacto/utils"
-	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
 )
 
 var (
@@ -61,9 +61,9 @@ type testingSuite struct {
 }
 
 func (s *testingSuite) setupSuite() {
-	// Start MySQL Docker container
-	port := docker.RunDocker(docker.ImageMySQL)
-	dba, err := sql.Open("mysql", fmt.Sprintf("root:root@(localhost:%s)/mysql?parseTime=true", port))
+	// Start PostgreSQL Docker container
+	port := docker.RunDocker(docker.ImagePostgres)
+	dba, err := sql.Open("postgres", fmt.Sprintf("postgres://postgres:postgres@localhost:%s/postgres?sslmode=disable", port))
 	if err != nil {
 		log.Fatalf("sql.Open failed: %s", err)
 	}
@@ -93,10 +93,10 @@ func (s *testingSuite) setupSuite() {
 
 	// Set up gofacto factories
 	s.authorF = gofacto.New(Author{}).SetConfig(gofacto.Config[Author]{
-		DB: &Config{DB: s.db},
+		DB: NewConfig(s.db),
 	})
 	s.bookF = gofacto.New(Book{}).SetConfig(gofacto.Config[Book]{
-		DB: &Config{DB: s.db},
+		DB: NewConfig(s.db),
 	})
 }
 
@@ -148,7 +148,7 @@ func (s *testingSuite) TestInsert(t *testing.T) {
 	}
 
 	// verify the inserted data
-	stmt := "SELECT * FROM authors WHERE id = ?"
+	stmt := "SELECT * FROM authors WHERE id = $1"
 	row := s.db.QueryRow(stmt, mockAuthor.ID)
 	var author Author
 	if err := row.Scan(
@@ -180,7 +180,7 @@ func (s *testingSuite) TestInsertList(t *testing.T) {
 	// prepare mock data
 	mockAuthors, err := s.authorF.BuildList(mockCTX, 3).Insert()
 	if err != nil {
-		t.Fatalf("Failed to insert books: %s", err)
+		t.Fatalf("Failed to insert authors: %s", err)
 	}
 
 	// verify the inserted data
@@ -233,7 +233,7 @@ func (s *testingSuite) TestWithOne(t *testing.T) {
 	}
 
 	// verify the inserted data
-	bookStmt := "SELECT * FROM books WHERE author_id = ?"
+	bookStmt := "SELECT * FROM books WHERE author_id = $1"
 	bookRow := s.db.QueryRow(bookStmt, mockBook.AuthorID)
 	var book Book
 	if err := bookRow.Scan(
@@ -254,7 +254,12 @@ func (s *testingSuite) TestWithOne(t *testing.T) {
 		t.Fatalf("Failed to scan book: %s", err)
 	}
 
-	authorStmt := "SELECT * FROM authors WHERE id = ?"
+	// trim the value of CHAR(13)
+	// when selecting the value of CHAR(13) from postgres, it will include the padding space
+	trimStr := strings.TrimSpace(*book.ISBN)
+	book.ISBN = &trimStr
+
+	authorStmt := "SELECT * FROM authors WHERE id = $1"
 	authorRow := s.db.QueryRow(authorStmt, mockBook.AuthorID)
 	var author Author
 	if err := authorRow.Scan(
@@ -299,8 +304,8 @@ func (s *testingSuite) TestWithMany(t *testing.T) {
 	mockAuthors := utils.CvtToT[Author](mockAnyAuthors)
 
 	// verify the inserted data
-	bookStmt := "SELECT * FROM books WHERE author_id = ?"
-	authorStmt := "SELECT * FROM authors WHERE id = ?"
+	bookStmt := "SELECT * FROM books WHERE author_id = $1"
+	authorStmt := "SELECT * FROM authors WHERE id = $1"
 
 	for i := 0; i < 3; i++ {
 		bookRow := s.db.QueryRow(bookStmt, mockBooks[i].AuthorID)
@@ -322,6 +327,11 @@ func (s *testingSuite) TestWithMany(t *testing.T) {
 		); err != nil {
 			t.Fatalf("Failed to scan book: %s", err)
 		}
+
+		// trim the value of CHAR(13)
+		// when selecting the value of CHAR(13) from postgres, it will include the padding space
+		trimStr := strings.TrimSpace(*book.ISBN)
+		book.ISBN = &trimStr
 
 		authorRow := s.db.QueryRow(authorStmt, mockBooks[i].AuthorID)
 		var author Author
@@ -366,7 +376,7 @@ func (s *testingSuite) TestListWithOne(t *testing.T) {
 	}
 
 	// verify the inserted data
-	bookStmt := "SELECT * FROM books WHERE author_id = ?"
+	bookStmt := "SELECT * FROM books WHERE author_id = $1"
 	bookRows, err := s.db.Query(bookStmt, mockBooks[0].AuthorID)
 	if err != nil {
 		t.Fatalf("Failed to query books: %s", err)
@@ -393,10 +403,15 @@ func (s *testingSuite) TestListWithOne(t *testing.T) {
 			t.Fatalf("Failed to scan book: %s", err)
 		}
 
+		// trim the value of CHAR(13)
+		// when selecting the value of CHAR(13) from postgres, it will include the padding space
+		trimStr := strings.TrimSpace(*book.ISBN)
+		book.ISBN = &trimStr
+
 		books = append(books, book)
 	}
 
-	authorStmt := "SELECT * FROM authors WHERE id = ?"
+	authorStmt := "SELECT * FROM authors WHERE id = $1"
 	authorRow := s.db.QueryRow(authorStmt, mockBooks[0].AuthorID)
 	var author Author
 	if err := authorRow.Scan(

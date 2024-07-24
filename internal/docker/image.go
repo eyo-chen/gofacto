@@ -16,6 +16,9 @@ const (
 	// ImageMySQL is a Image of type MySQL.
 	ImageMySQL
 
+	// ImagePostgres is a Image of type Postgres.
+	ImagePostgres
+
 	// ImageMongo is a Image of type Mongo.
 	ImageMongo
 )
@@ -37,6 +40,22 @@ var imageInfos = map[Image]ImageInfo{
 		Port: "3306/tcp",
 		CheckReadyFunc: func(port string) error {
 			db, err := sql.Open("mysql", fmt.Sprintf("root:root@(localhost:%s)/mysql?parseTime=true", port))
+			if err != nil {
+				return err
+			}
+
+			return db.Ping()
+		},
+	},
+	ImagePostgres: {
+		RunOptions: dockertest.RunOptions{
+			Repository: "postgres",
+			Tag:        "13",
+			Env:        []string{"POSTGRES_PASSWORD=postgres"},
+		},
+		Port: "5432/tcp",
+		CheckReadyFunc: func(port string) error {
+			db, err := sql.Open("postgres", fmt.Sprintf("postgres://postgres:postgres@localhost:%s/postgres?sslmode=disable", port))
 			if err != nil {
 				return err
 			}
