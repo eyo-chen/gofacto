@@ -10,11 +10,12 @@ import (
 	"testing"
 	"time"
 
+	_ "github.com/go-sql-driver/mysql"
+
 	"github.com/eyo-chen/gofacto"
 	"github.com/eyo-chen/gofacto/internal/docker"
 	"github.com/eyo-chen/gofacto/internal/testutils"
 	"github.com/eyo-chen/gofacto/utils"
-	_ "github.com/go-sql-driver/mysql"
 )
 
 var (
@@ -184,8 +185,8 @@ func (s *testingSuite) TestInsertList(t *testing.T) {
 	}
 
 	// verify the inserted data
-	stmt := "SELECT * FROM authors"
-	rows, err := s.db.Query(stmt)
+	stmt := "SELECT * FROM authors WHERE id IN (?, ?, ?)"
+	rows, err := s.db.Query(stmt, mockAuthors[0].ID, mockAuthors[1].ID, mockAuthors[2].ID)
 	if err != nil {
 		t.Fatalf("Failed to query authors: %s", err)
 	}

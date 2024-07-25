@@ -184,8 +184,8 @@ func (s *testingSuite) TestInsertList(t *testing.T) {
 	}
 
 	// verify the inserted data
-	stmt := "SELECT * FROM authors"
-	rows, err := s.db.Query(stmt)
+	stmt := "SELECT * FROM authors WHERE id IN ($1, $2, $3)"
+	rows, err := s.db.Query(stmt, mockAuthors[0].ID, mockAuthors[1].ID, mockAuthors[2].ID)
 	if err != nil {
 		t.Fatalf("Failed to query authors: %s", err)
 	}

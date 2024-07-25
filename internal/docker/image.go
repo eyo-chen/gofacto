@@ -1,10 +1,14 @@
 package docker
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+	"log"
 
 	"github.com/ory/dockertest/v3"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type Image int32
@@ -61,6 +65,22 @@ var imageInfos = map[Image]ImageInfo{
 			}
 
 			return db.Ping()
+		},
+	},
+	ImageMongo: {
+		RunOptions: dockertest.RunOptions{
+			Repository: "mongo",
+			Tag:        "4.4",
+		},
+		Port: "27017/tcp",
+		CheckReadyFunc: func(port string) error {
+			ctx := context.Background()
+			client, err := mongo.Connect(ctx, options.Client().ApplyURI(fmt.Sprintf("mongodb://localhost:%s", port)))
+			if err != nil {
+				log.Fatalf("mongo.Connect failed: %s", err)
+			}
+
+			return client.Ping(ctx, nil)
 		},
 	},
 }

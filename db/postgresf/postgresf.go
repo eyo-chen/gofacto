@@ -31,7 +31,6 @@ func (d *mySQLDialect) GenPlaceholder(placeholderIndex int) string {
 
 func (d *mySQLDialect) GenInsertStmt(tableName, fieldNames, placeholder string) string {
 	return fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s) RETURNING id", tableName, fieldNames, placeholder)
-
 }
 
 func (d *mySQLDialect) InsertToDB(ctx context.Context, tx *sql.Tx, stmt *sql.Stmt, vals []interface{}) (int64, error) {

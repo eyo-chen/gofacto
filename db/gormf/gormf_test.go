@@ -9,12 +9,13 @@ import (
 	"testing"
 	"time"
 
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
+
 	"github.com/eyo-chen/gofacto"
 	"github.com/eyo-chen/gofacto/internal/docker"
 	"github.com/eyo-chen/gofacto/internal/testutils"
 	"github.com/eyo-chen/gofacto/utils"
-	"gorm.io/driver/mysql"
-	"gorm.io/gorm"
 )
 
 var (
@@ -94,10 +95,10 @@ func (s *testingSuite) setupSuite() {
 
 	// Set up gofacto factories
 	s.authorF = gofacto.New(Author{}).SetConfig(gofacto.Config[Author]{
-		DB: &Config{DB: db},
+		DB: NewConfig(db),
 	})
 	s.bookF = gofacto.New(Book{}).SetConfig(gofacto.Config[Book]{
-		DB: &Config{DB: db},
+		DB: NewConfig(db),
 	})
 }
 
@@ -168,9 +169,15 @@ func (s *testingSuite) TestInsertList(t *testing.T) {
 		t.Fatalf("Failed to insert authors: %s", err)
 	}
 
+	// Collect the IDs of the inserted mock authors
+	ids := make([]int64, len(mockAuthors))
+	for i, author := range mockAuthors {
+		ids[i] = author.ID
+	}
+
 	// verify the inserted data
 	var authors []Author
-	if err := s.db.Find(&authors).Error; err != nil {
+	if err := s.db.Where("id IN ?", ids).Find(&authors).Error; err != nil {
 		t.Fatalf("Failed to find authors: %s", err)
 	}
 

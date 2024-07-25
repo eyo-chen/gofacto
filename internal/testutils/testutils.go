@@ -104,6 +104,11 @@ func compareStruct(v1 reflect.Value, v2 reflect.Value, ignoreFields []string) er
 			continue
 		}
 
+		// ignore unexported fields
+		if v1.Type().Field(i).PkgPath != "" || v2.Type().Field(i).PkgPath != "" {
+			continue
+		}
+
 		// check if both fields are same type
 		if field1.Type() != field2.Type() || field1.Kind() != field2.Kind() {
 			return fmt.Errorf("field %s must be the same type", fieldName)
