@@ -1,16 +1,15 @@
 package sqlf
 
 import (
-	"bytes"
 	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"reflect"
 	"strings"
-	"unicode"
 
 	"github.com/eyo-chen/gofacto/db"
+	"github.com/eyo-chen/gofacto/internal/utils"
 )
 
 // Config is for raw SQL database operations
@@ -144,7 +143,7 @@ func prepareStmtAndVals(tableName string, values ...interface{}) (string, [][]in
 			if index == 0 {
 				fieldName := val.Type().Field(i).Tag.Get("sqlf")
 				if fieldName == "" {
-					fieldName = camelToSnake(n)
+					fieldName = utils.CamelToSnake(n)
 				}
 
 				fieldNames = append(fieldNames, fieldName)
@@ -191,22 +190,4 @@ func setIDField(v interface{}, id int64) {
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		idField.SetUint(uint64(id))
 	}
-}
-
-// CamelToSnake converts the given camel case string to snake case
-func camelToSnake(input string) string {
-	var buf bytes.Buffer
-
-	for i, r := range input {
-		if unicode.IsUpper(r) {
-			if i > 0 && unicode.IsLower(rune(input[i-1])) {
-				buf.WriteRune('_')
-			}
-			buf.WriteRune(unicode.ToLower(r))
-		} else {
-			buf.WriteRune(r)
-		}
-	}
-
-	return buf.String()
 }

@@ -7,6 +7,7 @@ import (
 	"reflect"
 
 	"github.com/eyo-chen/gofacto/db"
+	"github.com/eyo-chen/gofacto/internal/utils"
 )
 
 // Config is the configuration for the factory
@@ -116,7 +117,7 @@ func (f *Factory[T]) SetConfig(c Config[T]) *Factory[T] {
 	f.ignoreFields = c.IgnoreFields
 
 	if c.StorageName == "" {
-		f.storageName = fmt.Sprintf("%ss", camelToSnake(f.dataType.Name()))
+		f.storageName = fmt.Sprintf("%ss", utils.CamelToSnake(f.dataType.Name()))
 	} else {
 		f.storageName = c.StorageName
 	}

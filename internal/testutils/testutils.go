@@ -1,4 +1,4 @@
-package gofacto
+package testutils
 
 import (
 	"errors"
@@ -10,7 +10,8 @@ import (
 	"time"
 )
 
-func compareVal(val1, val2 interface{}, ignoreFields ...string) error {
+// CompareVal compares two values. IgnoreFields is a list of fields that will be ignored during comparison.
+func CompareVal(val1, val2 interface{}, ignoreFields ...string) error {
 	// check nil values
 	if val1 == nil && val2 == nil {
 		return nil
@@ -38,7 +39,7 @@ func compareVal(val1, val2 interface{}, ignoreFields ...string) error {
 		}
 
 		// dereference pointer, and recursively compare
-		if err := compareVal(v1.Elem().Interface(), v2.Elem().Interface(), ignoreFields...); err != nil {
+		if err := CompareVal(v1.Elem().Interface(), v2.Elem().Interface(), ignoreFields...); err != nil {
 			return err
 		}
 
@@ -61,7 +62,7 @@ func compareVal(val1, val2 interface{}, ignoreFields ...string) error {
 		}
 
 		for i := 0; i < v1.Len(); i++ {
-			if err := compareVal(v1.Index(i).Interface(), v2.Index(i).Interface(), ignoreFields...); err != nil {
+			if err := CompareVal(v1.Index(i).Interface(), v2.Index(i).Interface(), ignoreFields...); err != nil {
 				return fmt.Errorf("index %d of slice has error: %v", i, err)
 			}
 		}
@@ -76,7 +77,7 @@ func compareVal(val1, val2 interface{}, ignoreFields ...string) error {
 
 	// check interface
 	if v1.Kind() == reflect.Interface {
-		if err := compareVal(v1.Interface(), v2.Interface(), ignoreFields...); err != nil {
+		if err := CompareVal(v1.Interface(), v2.Interface(), ignoreFields...); err != nil {
 			return err
 		}
 
@@ -85,6 +86,7 @@ func compareVal(val1, val2 interface{}, ignoreFields ...string) error {
 
 	// check non-struct values(like int, string, slice, etc.)
 	if !reflect.DeepEqual(val1, val2) {
+		fmt.Println("error", val1, val2)
 		return fmt.Errorf("values are different, the first one is %v, the second one is %v", val1, val2)
 	}
 
@@ -103,12 +105,17 @@ func compareStruct(v1 reflect.Value, v2 reflect.Value, ignoreFields []string) er
 			continue
 		}
 
+		// ignore unexported fields
+		if v1.Type().Field(i).PkgPath != "" || v2.Type().Field(i).PkgPath != "" {
+			continue
+		}
+
 		// check if both fields are same type
 		if field1.Type() != field2.Type() || field1.Kind() != field2.Kind() {
 			return fmt.Errorf("field %s must be the same type", fieldName)
 		}
 
-		if err := compareVal(field1.Interface(), field2.Interface(), ignoreFields...); err != nil {
+		if err := CompareVal(field1.Interface(), field2.Interface(), ignoreFields...); err != nil {
 			return fmt.Errorf("field %s has error: %v", fieldName, err)
 		}
 	}
@@ -116,7 +123,8 @@ func compareStruct(v1 reflect.Value, v2 reflect.Value, ignoreFields []string) er
 	return nil
 }
 
-func isNotZeroVal(val interface{}, ignoreFields ...string) error {
+// IsNotZeroVal checks if the value is not zero value. IgnoreFields is a list of fields that will be ignored during comparison.
+func IsNotZeroVal(val interface{}, ignoreFields ...string) error {
 	v := reflect.ValueOf(val)
 
 	if v.Kind() == reflect.Ptr {
@@ -124,13 +132,13 @@ func isNotZeroVal(val interface{}, ignoreFields ...string) error {
 			return nil
 		}
 
-		return isNotZeroVal(v.Elem().Interface(), ignoreFields...)
+		return IsNotZeroVal(v.Elem().Interface(), ignoreFields...)
 	}
 
 	// check slice values
 	if v.Kind() == reflect.Slice {
 		for i := 0; i < v.Len(); i++ {
-			if err := isNotZeroVal(v.Index(i).Interface(), ignoreFields...); err != nil {
+			if err := IsNotZeroVal(v.Index(i).Interface(), ignoreFields...); err != nil {
 				return err
 			}
 		}
@@ -182,7 +190,8 @@ func checkNonZero(v reflect.Value, fieldName string) error {
 	return nil
 }
 
-func isZeroVal(val interface{}, ignoreFields ...string) error {
+// IsZeroVal checks if the value is zero value. IgnoreFields is a list of fields that will be ignored during comparison.
+func IsZeroVal(val interface{}, ignoreFields ...string) error {
 	v := reflect.ValueOf(val)
 
 	if v.Kind() == reflect.Ptr {
@@ -190,13 +199,13 @@ func isZeroVal(val interface{}, ignoreFields ...string) error {
 			return nil
 		}
 
-		return isZeroVal(v.Elem().Interface(), ignoreFields...)
+		return IsZeroVal(v.Elem().Interface(), ignoreFields...)
 	}
 
 	// check slice values
 	if v.Kind() == reflect.Slice {
 		for i := 0; i < v.Len(); i++ {
-			if err := isZeroVal(v.Index(i).Interface(), ignoreFields...); err != nil {
+			if err := IsZeroVal(v.Index(i).Interface(), ignoreFields...); err != nil {
 				return err
 			}
 		}
@@ -248,7 +257,8 @@ func checkZero(v reflect.Value, fieldName string) error {
 	return fmt.Errorf("field %s is not zero value", fieldName)
 }
 
-func getFunName(fn interface{}) string {
+// GetFunName returns the name of the function.
+func GetFunName(fn interface{}) string {
 	if fn == nil {
 		return ""
 	}
@@ -258,13 +268,20 @@ func getFunName(fn interface{}) string {
 	return parts[len(parts)-1]
 }
 
-func filterFields(val interface{}, fields ...string) []string {
+// FilterFields returns a list of field names that are not in the fields list.
+func FilterFields(val interface{}, fields ...string) []string {
 	v := reflect.ValueOf(val)
+
+	// convert fields to hash map
+	fieldMap := make(map[string]bool)
+	for _, f := range fields {
+		fieldMap[f] = true
+	}
 
 	var fieldNames []string
 	for i := 0; i < v.NumField(); i++ {
 		fieldName := v.Type().Field(i).Name
-		if slices.Contains(fields, fieldName) {
+		if fieldMap[fieldName] {
 			continue
 		}
 

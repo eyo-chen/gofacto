@@ -1,7 +1,6 @@
 package gofacto
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -9,9 +8,9 @@ import (
 	"slices"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/eyo-chen/gofacto/db"
+	"github.com/eyo-chen/gofacto/internal/utils"
 )
 
 const (
@@ -306,31 +305,13 @@ func genTagToInfo(dataType reflect.Type) (map[string]tagInfo, error) {
 		if len(parts) == 2 {
 			tableName = parts[1]
 		} else {
-			tableName = camelToSnake(structName) + "s"
+			tableName = utils.CamelToSnake(structName) + "s"
 		}
 
 		tagToInfo[structName] = tagInfo{tableName: tableName, fieldName: field.Name}
 	}
 
 	return tagToInfo, nil
-}
-
-// camelToSnake converts a camel case string to a snake case string
-func camelToSnake(input string) string {
-	var buf bytes.Buffer
-
-	for i, r := range input {
-		if unicode.IsUpper(r) {
-			if i > 0 && unicode.IsLower(rune(input[i-1])) {
-				buf.WriteRune('_')
-			}
-			buf.WriteRune(unicode.ToLower(r))
-		} else {
-			buf.WriteRune(r)
-		}
-	}
-
-	return buf.String()
 }
 
 // setFieldValue sets the value of the source to the target,
