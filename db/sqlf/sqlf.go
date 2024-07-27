@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -33,7 +34,11 @@ func (c *Config) Insert(ctx context.Context, params db.InserParams) (interface{}
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() {
+		if rollbackErr := tx.Rollback(); rollbackErr != nil && !errors.Is(rollbackErr, sql.ErrTxDone) && err == nil {
+			err = rollbackErr
+		}
+	}()
 
 	id, err := insertToDB(ctx, tx, stmt, vals[0])
 	if err != nil {
@@ -61,7 +66,11 @@ func (c *Config) InsertList(ctx context.Context, params db.InserListParams) ([]i
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() {
+		if rollbackErr := tx.Rollback(); rollbackErr != nil && !errors.Is(rollbackErr, sql.ErrTxDone) && err == nil {
+			err = rollbackErr
+		}
+	}()
 
 	result := make([]interface{}, len(fieldValues))
 	for i, vals := range fieldValues {
