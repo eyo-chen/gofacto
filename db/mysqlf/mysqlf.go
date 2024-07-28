@@ -169,12 +169,9 @@ func prepareStmtAndVals(tableName string, values ...interface{}) (string, [][]in
 
 // insertToDB inserts the given values to the database
 func insertToDB(ctx context.Context, tx *sql.Tx, stmt *sql.Stmt, vals []interface{}) (int64, error) {
-	var res sql.Result
-	var errSQL error
-
-	res, errSQL = tx.Stmt(stmt).ExecContext(ctx, vals...)
-	if errSQL != nil {
-		return 0, errSQL
+	res, err := tx.Stmt(stmt).ExecContext(ctx, vals...)
+	if err != nil {
+		return 0, err
 	}
 
 	id, err := res.LastInsertId()
