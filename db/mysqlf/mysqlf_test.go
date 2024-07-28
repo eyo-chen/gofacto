@@ -147,7 +147,7 @@ func (s *testingSuite) Run(t *testing.T) {
 	}
 }
 
-func TestSQLF(t *testing.T) {
+func TestMySQLf(t *testing.T) {
 	s := testingSuite{}
 	s.setupSuite()
 	defer func() {
