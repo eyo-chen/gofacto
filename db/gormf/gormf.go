@@ -7,25 +7,31 @@ import (
 	"gorm.io/gorm"
 )
 
-// Config is for Gorm database operations
-type Config struct {
-	// DB is the database connection
-	// must provide if want to insert data into the database
-	DB *gorm.DB
+// config is for Gorm configuration
+type config struct {
+	// db is the database connection
+	db *gorm.DB
 }
 
-func (c *Config) Insert(ctx context.Context, params db.InserParams) (interface{}, error) {
-	if err := c.DB.WithContext(ctx).Table(params.StorageName).Create(params.Value).Error; err != nil {
+// NewConfig creates a new gorm configuration
+func NewConfig(db *gorm.DB) *config {
+	return &config{
+		db: db,
+	}
+}
+
+func (c *config) Insert(ctx context.Context, params db.InserParams) (interface{}, error) {
+	if err := c.db.WithContext(ctx).Table(params.StorageName).Create(params.Value).Error; err != nil {
 		return nil, err
 	}
 
 	return params.Value, nil
 }
 
-func (c *Config) InsertList(ctx context.Context, params db.InserListParams) ([]interface{}, error) {
+func (c *config) InsertList(ctx context.Context, params db.InserListParams) ([]interface{}, error) {
 	// NOTE: Using for-loop to insert is a workaround for GORM
 	for _, v := range params.Values {
-		if err := c.DB.WithContext(ctx).Table(params.StorageName).Create(v).Error; err != nil {
+		if err := c.db.WithContext(ctx).Table(params.StorageName).Create(v).Error; err != nil {
 			return nil, err
 		}
 	}
