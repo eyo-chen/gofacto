@@ -11,6 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+// Image is a type of image
 type Image int32
 
 const (
@@ -27,14 +28,14 @@ const (
 	ImageMongo
 )
 
-type ImageInfo struct {
+type imageInfo struct {
 	dockertest.RunOptions
 
 	Port           string
 	CheckReadyFunc func(port string) error
 }
 
-var imageInfos = map[Image]ImageInfo{
+var imageInfos = map[Image]imageInfo{
 	ImageMySQL: {
 		RunOptions: dockertest.RunOptions{
 			Repository: "mysql",
