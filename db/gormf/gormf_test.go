@@ -143,7 +143,9 @@ func (s *testingSuite) Run(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			test.fn(t)
-			s.tearDownTest()
+			if err := s.tearDownTest(); err != nil {
+				t.Fatalf("Failed to tear down test: %s", err)
+			}
 		})
 	}
 }
