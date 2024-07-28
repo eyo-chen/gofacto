@@ -14,6 +14,7 @@ var (
 	resource *dockertest.Resource
 )
 
+// RunDocker runs a docker container with the given image type
 func RunDocker(imageType Image) string {
 	var err error
 	pool, err = dockertest.NewPool("")
@@ -55,6 +56,7 @@ func RunDocker(imageType Image) string {
 	return port
 }
 
+// PurgeDocker purges the docker container
 func PurgeDocker() {
 	if err := pool.Purge(resource); err != nil {
 		panic(fmt.Sprintf("pool.Purge failed: %s", err))
