@@ -150,7 +150,7 @@ func (s *testingSuite) Run(t *testing.T) {
 	}
 }
 
-func TestSQLF(t *testing.T) {
+func TestGormf(t *testing.T) {
 	s := testingSuite{}
 	s.setupSuite()
 	defer func() {
@@ -169,7 +169,7 @@ func (s *testingSuite) TestInsert(t *testing.T) {
 		t.Fatalf("Failed to insert author: %s", err)
 	}
 
-	// prepare the expected data
+	// prepare expected data
 	var author Author
 	if err := s.db.First(&author, mockAuthor.ID).Error; err != nil {
 		t.Fatalf("Failed to find author: %s", err)
@@ -194,7 +194,7 @@ func (s *testingSuite) TestInsertList(t *testing.T) {
 		ids[i] = author.ID
 	}
 
-	// prepare the expected data
+	// prepare expected data
 	var authors []Author
 	if err := s.db.Where("id IN ?", ids).Find(&authors).Error; err != nil {
 		t.Fatalf("Failed to find authors: %s", err)
@@ -216,7 +216,7 @@ func (s *testingSuite) TestWithOne(t *testing.T) {
 		t.Fatalf("Failed to insert: %s", err)
 	}
 
-	// prepare the expected data
+	// prepare expected data
 	var book Book
 	if err := s.db.Where("author_id = ?", mockBook.AuthorID).First(&book).Error; err != nil {
 		t.Fatalf("Failed to find book: %s", err)
@@ -257,7 +257,7 @@ func (s *testingSuite) TestWithMany(t *testing.T) {
 
 	// loop through each data to check association connection
 	for i := 0; i < 3; i++ {
-		// prepare the expected data
+		// prepare expected data
 		var book Book
 		if err := s.db.Where("author_id = ?", mockBooks[i].AuthorID).First(&book).Error; err != nil {
 			t.Fatalf("Failed to find book: %s", err)
@@ -289,7 +289,7 @@ func (s *testingSuite) TestListWithOne(t *testing.T) {
 		t.Fatalf("Failed to insert books: %s", err)
 	}
 
-	// prepare the expected data
+	// prepare expected data
 	var books []Book
 	if err := s.db.Where("author_id = ?", mockBooks[0].AuthorID).Find(&books).Error; err != nil {
 		t.Fatalf("Failed to find books: %s", err)

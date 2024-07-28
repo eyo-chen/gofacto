@@ -158,6 +158,7 @@ func (f *Factory[T]) Build(ctx context.Context) *builder[T] {
 	f.index++
 
 	return &builder[T]{
+		ctx:    ctx,
 		v:      &v,
 		errors: []error{},
 		f:      f,
@@ -188,6 +189,7 @@ func (f *Factory[T]) BuildList(ctx context.Context, n int) *builderList[T] {
 	}
 
 	return &builderList[T]{
+		ctx:    ctx,
 		list:   list,
 		errors: errs,
 		f:      f,
