@@ -166,7 +166,7 @@ func (s *testingSuite) TestInsert(t *testing.T) {
 		t.Fatalf("Failed to insert author: %s", err)
 	}
 
-	// prepare the expected data
+	// prepare expected data
 	stmt := "SELECT * FROM authors WHERE id = ?"
 	row := s.db.QueryRow(stmt, mockAuthor.ID)
 	var author Author
@@ -202,7 +202,7 @@ func (s *testingSuite) TestInsertList(t *testing.T) {
 		t.Fatalf("Failed to insert books: %s", err)
 	}
 
-	// prepare the expected data
+	// prepare expected data
 	stmt := "SELECT * FROM authors WHERE id IN (?, ?, ?)"
 	rows, err := s.db.Query(stmt, mockAuthors[0].ID, mockAuthors[1].ID, mockAuthors[2].ID)
 	if err != nil {
@@ -251,7 +251,7 @@ func (s *testingSuite) TestWithOne(t *testing.T) {
 		t.Fatalf("Failed to insert: %s", err)
 	}
 
-	// prepare the expected data
+	// prepare expected data
 	bookStmt := "SELECT * FROM books WHERE author_id = ?"
 	bookRow := s.db.QueryRow(bookStmt, mockBook.AuthorID)
 	var book Book
@@ -323,7 +323,7 @@ func (s *testingSuite) TestWithMany(t *testing.T) {
 		mockAuthors[i] = *mockAnyAuthors[i].(*Author)
 	}
 
-	// prepare the expected data
+	// prepare expected data
 	bookStmt := "SELECT * FROM books WHERE author_id = ?"
 	authorStmt := "SELECT * FROM authors WHERE id = ?"
 
@@ -391,7 +391,7 @@ func (s *testingSuite) TestListWithOne(t *testing.T) {
 		t.Fatalf("Failed to insert books: %s", err)
 	}
 
-	// prepare the expected data
+	// prepare expected data
 	bookStmt := "SELECT * FROM books WHERE author_id = ?"
 	bookRows, err := s.db.Query(bookStmt, mockBooks[0].AuthorID)
 	if err != nil {
