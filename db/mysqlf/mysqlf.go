@@ -12,24 +12,29 @@ import (
 	"github.com/eyo-chen/gofacto/internal/utils"
 )
 
-// Config is for raw SQL database operations
-type Config struct {
-	// DB is the database connection
-	// must provide if want to insert data into the database
-	DB *sql.DB
+// config is for MySQL database configuration
+type config struct {
+	// db is the database connection
+	db *sql.DB
 }
 
-func (c *Config) Insert(ctx context.Context, params db.InserParams) (interface{}, error) {
+// NewConfig creates a new MySQL configuration
+func NewConfig(db *sql.DB) *config {
+	return &config{
+		db: db,
+	}
+}
+
+func (c *config) Insert(ctx context.Context, params db.InserParams) (interface{}, error) {
 	rawStmt, vals := prepareStmtAndVals(params.StorageName, params.Value)
 
-	// Prepare the insert statement
-	stmt, err := c.DB.Prepare(rawStmt)
+	stmt, err := c.db.Prepare(rawStmt)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 
-	tx, err := c.DB.Begin()
+	tx, err := c.db.Begin()
 	if err != nil {
 		return nil, err
 	}
@@ -52,16 +57,16 @@ func (c *Config) Insert(ctx context.Context, params db.InserParams) (interface{}
 	return params.Value, nil
 }
 
-func (c *Config) InsertList(ctx context.Context, params db.InserListParams) ([]interface{}, error) {
+func (c *config) InsertList(ctx context.Context, params db.InserListParams) ([]interface{}, error) {
 	rawStmt, fieldValues := prepareStmtAndVals(params.StorageName, params.Values...)
 
-	stmt, err := c.DB.Prepare(rawStmt)
+	stmt, err := c.db.Prepare(rawStmt)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 
-	tx, err := c.DB.Begin()
+	tx, err := c.db.Begin()
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +96,7 @@ func (c *Config) InsertList(ctx context.Context, params db.InserListParams) ([]i
 	return result, nil
 }
 
-func (c *Config) SetIDField(v interface{}, i int) error {
+func (c *config) SetIDField(v interface{}, i int) error {
 	if reflect.ValueOf(v).Kind() != reflect.Ptr {
 		return fmt.Errorf("SetIDField: argument must be a pointer")
 	}
@@ -154,7 +159,7 @@ func prepareStmtAndVals(tableName string, values ...interface{}) (string, [][]in
 		fieldValues = append(fieldValues, vals)
 	}
 
-	// Construct the SQL insert statement
+	// construct the SQL insert statement
 	fns := strings.Join(fieldNames, ", ")
 	phs := strings.Join(placeholders, ", ")
 	rawStmt := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)", tableName, fns, phs)
