@@ -61,7 +61,7 @@ type testingSuite struct {
 }
 
 func (s *testingSuite) setupSuite() {
-	// Start MySQL Docker container
+	// start MySQL Docker container
 	port := docker.RunDocker(docker.ImageMySQL)
 	dsn := fmt.Sprintf("root:root@(localhost:%s)/mysql?parseTime=true", port)
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
@@ -69,19 +69,19 @@ func (s *testingSuite) setupSuite() {
 		log.Fatalf("gorm.Open failed: %s", err)
 	}
 
-	// Set the database connection
+	// set the database connection
 	s.db = db
 
-	// Read SQL file
+	// read SQL file
 	schema, err := os.ReadFile("schema.sql")
 	if err != nil {
 		log.Fatalf("Failed to read schema.sql: %s", err)
 	}
 
-	// Split SQL file content into individual statements
+	// split SQL file content into individual statements
 	queries := strings.Split(string(schema), ";")
 
-	// Execute SQL statements one by one
+	// execute SQL statements one by one
 	for _, query := range queries {
 		query = strings.TrimSpace(query)
 		if query == "" {
@@ -92,7 +92,7 @@ func (s *testingSuite) setupSuite() {
 		}
 	}
 
-	// Set up gofacto factories
+	// set up gofacto factories
 	s.authorF = gofacto.New(Author{}).SetConfig(gofacto.Config[Author]{
 		DB: NewConfig(db),
 	})
