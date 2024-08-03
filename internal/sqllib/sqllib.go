@@ -36,7 +36,7 @@ type sqlDialect interface {
 }
 
 // NewConfig initializes a sqllib config for raw SQL database operations
-func NewConfig(db *sql.DB, dialect sqlDialect, packageName string) SQLHandler {
+func NewConfig(db *sql.DB, dialect sqlDialect, packageName string) db.Database {
 	return &Config{
 		db:          db,
 		dialect:     dialect,

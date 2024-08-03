@@ -5,10 +5,12 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/eyo-chen/gofacto/db"
 	"github.com/eyo-chen/gofacto/internal/sqllib"
 )
 
-func NewConfig(db *sql.DB) sqllib.SQLHandler {
+// NewConfig initializes interface for raw mySQL database operations
+func NewConfig(db *sql.DB) db.Database {
 	return sqllib.NewConfig(db, &mySQLDialect{}, "mysqlf")
 }
 
