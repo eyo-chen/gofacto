@@ -74,14 +74,14 @@ func (f *Factory[T]) setNonZeroValues(v interface{}) {
 
 		// handle slice
 		if curField.Type.Kind() == reflect.Slice {
-			f.setNonZeroValuesForSlice(curVal.Addr().Interface())
+			f.setNonZeroSlice(curVal.Addr().Interface())
 			continue
 		}
 
 		// handle pointer to slice
 		if curField.Type.Kind() == reflect.Ptr && curField.Type.Elem().Kind() == reflect.Slice {
 			newInstance := reflect.New(curField.Type.Elem()).Elem()
-			f.setNonZeroValuesForSlice(newInstance.Addr().Interface())
+			f.setNonZeroSlice(newInstance.Addr().Interface())
 			curVal.Set(newInstance.Addr())
 			continue
 		}
@@ -93,15 +93,15 @@ func (f *Factory[T]) setNonZeroValues(v interface{}) {
 	}
 }
 
-// setNonZeroValuesForSlice sets non-zero values to the given slice.
+// setNonZeroSlice sets non-zero values to the given slice.
 // Parameter v must be a pointer to a slice
-func (f *Factory[T]) setNonZeroValuesForSlice(v interface{}) {
+func (f *Factory[T]) setNonZeroSlice(v interface{}) {
 	val := reflect.ValueOf(v).Elem()
 
 	// handle slice
 	if val.Type().Elem().Kind() == reflect.Slice {
 		e := reflect.New(val.Type().Elem()).Elem()
-		f.setNonZeroValuesForSlice(e.Addr().Interface())
+		f.setNonZeroSlice(e.Addr().Interface())
 		val.Set(reflect.Append(val, e))
 		return
 	}
@@ -109,7 +109,7 @@ func (f *Factory[T]) setNonZeroValuesForSlice(v interface{}) {
 	// handle slice of pointers
 	if val.Type().Elem().Kind() == reflect.Ptr && val.Type().Elem().Elem().Kind() == reflect.Slice {
 		e := reflect.New(val.Type().Elem().Elem()).Elem()
-		f.setNonZeroValuesForSlice(e.Addr().Interface())
+		f.setNonZeroSlice(e.Addr().Interface())
 		val.Set(reflect.Append(val, e.Addr()))
 		return
 	}
@@ -166,10 +166,6 @@ func (f *Factory[T]) setAssValue(v interface{}) error {
 func (f *Factory[T]) insertAss(ctx context.Context) error {
 	if len(f.tagToInfo) == 0 {
 		return errors.New("tagToInfo is not set")
-	}
-
-	if len(f.associations) == 0 {
-		return errors.New("inserting associations without any associations")
 	}
 
 	for name, vals := range f.associations {
