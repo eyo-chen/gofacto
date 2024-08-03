@@ -115,6 +115,10 @@ func (c *Config) InsertList(ctx context.Context, params db.InserListParams) ([]i
 	return result, nil
 }
 
+func (c *Config) GenCustomType(t reflect.Type) (interface{}, bool) {
+	return nil, false
+}
+
 // prepareStmtAndVals prepares the SQL insert statement and the values to be inserted
 // values are the pointer to the struct
 func (c *Config) prepareStmtAndVals(tableName string, values ...interface{}) (string, [][]interface{}) {
