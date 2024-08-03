@@ -10,47 +10,55 @@ import (
 	"github.com/eyo-chen/gofacto/internal/utils"
 )
 
-// SQLDialect defines the behavior for different SQL dialects
-type SQLDialect interface {
+// Config is for raw SQL database operations
+type Config struct {
+	// db is the database connection
+	db *sql.DB
+
+	// dialect is the SQL dialect
+	dialect sqlDialect
+
+	// packageName is the package name
+	packageName string
+}
+
+// sqlDialect defines the behavior for different SQL dialects
+type sqlDialect interface {
 	// GenPlaceholder generates a placeholder
 	GenPlaceholder(placeholderIdx int) string
 
-	// GenInsertStmt generates an insert statement
+	// GenInsertStmt generates an insert raw SQL statement
 	GenInsertStmt(tableName, fieldNames, placeholder string) string
 
 	// InsertToDB inserts the values to the database
 	InsertToDB(ctx context.Context, tx *sql.Tx, stmt *sql.Stmt, vals []interface{}) (int64, error)
 }
 
-// Config is for raw SQL database operations
-type Config struct {
-	// DB is the database connection
-	DB *sql.DB
-
-	// Dialect is the SQL dialect
-	Dialect SQLDialect
-
-	// PackageName is the package name
-	PackageName string
+// NewConfig initializes a sqllib config for raw SQL database operations
+func NewConfig(db *sql.DB, dialect sqlDialect, packageName string) SQLHandler {
+	return &Config{
+		db:          db,
+		dialect:     dialect,
+		packageName: packageName,
+	}
 }
 
 func (c *Config) Insert(ctx context.Context, params db.InserParams) (interface{}, error) {
 	rawStmt, vals := c.prepareStmtAndVals(params.StorageName, params.Value)
 
-	// Prepare the insert statement
-	stmt, err := c.DB.Prepare(rawStmt)
+	stmt, err := c.db.Prepare(rawStmt)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 
-	tx, err := c.DB.Begin()
+	tx, err := c.db.Begin()
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback()
 
-	id, err := c.Dialect.InsertToDB(ctx, tx, stmt, vals[0])
+	id, err := c.dialect.InsertToDB(ctx, tx, stmt, vals[0])
 	if err != nil {
 		return nil, err
 	}
@@ -66,13 +74,13 @@ func (c *Config) Insert(ctx context.Context, params db.InserParams) (interface{}
 func (c *Config) InsertList(ctx context.Context, params db.InserListParams) ([]interface{}, error) {
 	rawStmt, fieldValues := c.prepareStmtAndVals(params.StorageName, params.Values...)
 
-	stmt, err := c.DB.Prepare(rawStmt)
+	stmt, err := c.db.Prepare(rawStmt)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 
-	tx, err := c.DB.Begin()
+	tx, err := c.db.Begin()
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +88,7 @@ func (c *Config) InsertList(ctx context.Context, params db.InserListParams) ([]i
 
 	result := make([]interface{}, len(fieldValues))
 	for i, vals := range fieldValues {
-		id, err := c.Dialect.InsertToDB(ctx, tx, stmt, vals)
+		id, err := c.dialect.InsertToDB(ctx, tx, stmt, vals)
 		if err != nil {
 			return nil, err
 		}
@@ -119,13 +127,13 @@ func (c *Config) prepareStmtAndVals(tableName string, values ...interface{}) (st
 			vals = append(vals, val.Field(i).Interface())
 
 			if index == 0 {
-				fieldName := val.Type().Field(i).Tag.Get(c.PackageName)
+				fieldName := val.Type().Field(i).Tag.Get(c.packageName)
 				if fieldName == "" {
 					fieldName = utils.CamelToSnake(n)
 				}
 
 				fieldNames = append(fieldNames, fieldName)
-				placeholders = append(placeholders, c.Dialect.GenPlaceholder(placeholderIndex))
+				placeholders = append(placeholders, c.dialect.GenPlaceholder(placeholderIndex))
 			}
 
 			placeholderIndex++
@@ -134,10 +142,10 @@ func (c *Config) prepareStmtAndVals(tableName string, values ...interface{}) (st
 		fieldValues = append(fieldValues, vals)
 	}
 
-	// Construct the SQL insert statement
+	// construct the SQL insert statement
 	fns := strings.Join(fieldNames, ", ")
 	phs := strings.Join(placeholders, ", ")
-	rawStmt := c.Dialect.GenInsertStmt(tableName, fns, phs)
+	rawStmt := c.dialect.GenInsertStmt(tableName, fns, phs)
 
 	return rawStmt, fieldValues
 }
@@ -146,6 +154,10 @@ func (c *Config) prepareStmtAndVals(tableName string, values ...interface{}) (st
 func setIDField(v interface{}, id int64) {
 	val := reflect.ValueOf(v).Elem()
 	idField := val.FieldByName("ID")
+	if !idField.IsValid() || !idField.CanSet() {
+		return
+	}
+
 	switch idField.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		idField.SetInt(id)
