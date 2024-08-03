@@ -188,7 +188,7 @@ func (s *testingSuite) TestInsert(t *testing.T) {
 	}
 
 	// assertion
-	if err := testutils.CompareVal(mockAuthor, author, "BirthDate", "LastPublicationTime"); err != nil {
+	if err := testutils.CompareVal(mockAuthor, author, "LastPublicationTime"); err != nil {
 		t.Fatalf("Inserted author is not the same as the mock author: %s", err)
 	}
 }
