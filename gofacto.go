@@ -152,7 +152,7 @@ func (f *Factory[T]) Build(ctx context.Context) *builder[T] {
 	}
 
 	if f.isSetZeroValue {
-		setNonZeroValues(f.index, &v, f.ignoreFields)
+		f.setNonZeroValues(&v)
 	}
 
 	f.index++
@@ -181,7 +181,7 @@ func (f *Factory[T]) BuildList(ctx context.Context, n int) *builderList[T] {
 		}
 
 		if f.isSetZeroValue {
-			setNonZeroValues(f.index, &v, f.ignoreFields)
+			f.setNonZeroValues(&v)
 		}
 
 		list[i] = &v
@@ -458,7 +458,7 @@ func (b *builder[T]) WithOne(v interface{}, ignoreFields ...string) *builder[T] 
 		b.f.tagToInfo = t
 	}
 
-	if err := setAssValue(v, b.f.tagToInfo, b.f.index, "WithOne", ignoreFields); err != nil {
+	if err := b.f.setAssValue(v); err != nil {
 		b.errors = append(b.errors, err)
 		return b
 	}
@@ -485,7 +485,7 @@ func (b *builderList[T]) WithOne(v interface{}, ignoreFields ...string) *builder
 		b.f.tagToInfo = t
 	}
 
-	if err := setAssValue(v, b.f.tagToInfo, b.f.index, "WithOne", ignoreFields); err != nil {
+	if err := b.f.setAssValue(v); err != nil {
 		b.errors = append(b.errors, err)
 		return b
 	}
@@ -514,7 +514,7 @@ func (b *builderList[T]) WithMany(values []interface{}, ignoreFields ...string) 
 
 	var curValName string
 	for _, v := range values {
-		if err := setAssValue(v, b.f.tagToInfo, b.f.index, "WithMany", ignoreFields); err != nil {
+		if err := b.f.setAssValue(v); err != nil {
 			b.errors = append(b.errors, err)
 			return b
 		}
