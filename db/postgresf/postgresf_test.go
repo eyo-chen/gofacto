@@ -145,7 +145,7 @@ func (s *testingSuite) Run(t *testing.T) {
 	}
 }
 
-func TestSQLF(t *testing.T) {
+func TestPostgresf(t *testing.T) {
 	s := testingSuite{}
 	s.setupSuite()
 	defer func() {
