@@ -17,51 +17,8 @@ const (
 	packageName = "gofacto"
 )
 
-// copyValues copys non-zero values from src to dest
-func copyValues[T any](dest *T, src T) error {
-	destValue := reflect.ValueOf(dest).Elem()
-	srcValue := reflect.ValueOf(src)
-
-	if destValue.Kind() != reflect.Struct {
-		return errors.New("destination value is not a struct")
-	}
-
-	if srcValue.Kind() != reflect.Struct {
-		return errors.New("source value is not a struct")
-	}
-
-	if destValue.Type() != srcValue.Type() {
-		return errors.New("destination and source type is different")
-	}
-
-	for i := 0; i < destValue.NumField(); i++ {
-		destField := destValue.Field(i)
-		srcField := srcValue.FieldByName(destValue.Type().Field(i).Name)
-
-		if srcField.IsValid() && destField.Type() == srcField.Type() && !srcField.IsZero() {
-			destField.Set(srcField)
-		}
-	}
-
-	return nil
-}
-
-// genFinalError generates a final error message from the given errors
-func genFinalError(errs []error) error {
-	if len(errs) == 0 {
-		return nil
-	}
-
-	errorMessages := make([]string, len(errs))
-	for i, err := range errs {
-		errorMessages[i] = err.Error()
-	}
-
-	return fmt.Errorf(strings.Join(errorMessages, "\n"))
-}
-
-// setNonZeroValues sets non-zero values to the given struct
-// v must be a pointer to a struct
+// setNonZeroValues sets non-zero values to the given struct.
+// Parameter v must be a pointer to a struct
 func (f *Factory[T]) setNonZeroValues(v interface{}) {
 	val := reflect.ValueOf(v).Elem()
 	typeOfVal := val.Type()
@@ -180,6 +137,94 @@ func (f *Factory[T]) setNonZeroValuesForSlice(v interface{}) {
 	}
 }
 
+// setAssValue sets the value to the associations value
+func (f *Factory[T]) setAssValue(v interface{}) error {
+	typeOfV := reflect.TypeOf(v)
+
+	// check if it's a pointer
+	if typeOfV.Kind() != reflect.Ptr {
+		name := typeOfV.Name()
+		return fmt.Errorf("type %s, value %v is not a pointer", name, v)
+	}
+
+	name := typeOfV.Elem().Name()
+	// check if it's a pointer to a struct
+	if typeOfV.Elem().Kind() != reflect.Struct {
+		return fmt.Errorf("type %s, value %v is not a pointer to a struct", name, v)
+	}
+
+	// check if it's existed in tagToInfo
+	if _, ok := f.tagToInfo[name]; !ok {
+		return fmt.Errorf("type %s, value %v is not found at tag", name, v)
+	}
+
+	f.setNonZeroValues(v)
+	return nil
+}
+
+// genAndInsertAss inserts the associations value into the database
+func (f *Factory[T]) insertAss(ctx context.Context) error {
+	if len(f.tagToInfo) == 0 {
+		return errors.New("tagToInfo is not set")
+	}
+
+	if len(f.associations) == 0 {
+		return errors.New("inserting associations without any associations")
+	}
+
+	for name, vals := range f.associations {
+		tableName := f.tagToInfo[name].tableName
+		if _, err := f.db.InsertList(ctx, db.InserListParams{StorageName: tableName, Values: vals}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// copyValues copys non-zero values from src to dest
+func copyValues[T any](dest *T, src T) error {
+	destValue := reflect.ValueOf(dest).Elem()
+	srcValue := reflect.ValueOf(src)
+
+	if destValue.Kind() != reflect.Struct {
+		return errors.New("destination value is not a struct")
+	}
+
+	if srcValue.Kind() != reflect.Struct {
+		return errors.New("source value is not a struct")
+	}
+
+	if destValue.Type() != srcValue.Type() {
+		return errors.New("destination and source type is different")
+	}
+
+	for i := 0; i < destValue.NumField(); i++ {
+		destField := destValue.Field(i)
+		srcField := srcValue.FieldByName(destValue.Type().Field(i).Name)
+
+		if srcField.IsValid() && destField.Type() == srcField.Type() && !srcField.IsZero() {
+			destField.Set(srcField)
+		}
+	}
+
+	return nil
+}
+
+// genFinalError generates a final error message from the given errors
+func genFinalError(errs []error) error {
+	if len(errs) == 0 {
+		return nil
+	}
+
+	errorMessages := make([]string, len(errs))
+	for i, err := range errs {
+		errorMessages[i] = err.Error()
+	}
+
+	return fmt.Errorf(strings.Join(errorMessages, "\n"))
+}
+
 // genNonZeroValue generates a non-zero value for the given type
 func genNonZeroValue(t reflect.Type, i int) interface{} {
 	switch t.Kind() {
@@ -247,51 +292,6 @@ func setField(target interface{}, name string, source interface{}, sourceFn stri
 	return nil
 }
 
-// setAssValue sets the value to the associations value
-func (f *Factory[T]) setAssValue(v interface{}) error {
-	typeOfV := reflect.TypeOf(v)
-
-	// check if it's a pointer
-	if typeOfV.Kind() != reflect.Ptr {
-		name := typeOfV.Name()
-		return fmt.Errorf("type %s, value %v is not a pointer", name, v)
-	}
-
-	name := typeOfV.Elem().Name()
-	// check if it's a pointer to a struct
-	if typeOfV.Elem().Kind() != reflect.Struct {
-		return fmt.Errorf("type %s, value %v is not a pointer to a struct", name, v)
-	}
-
-	// check if it's existed in tagToInfo
-	if _, ok := f.tagToInfo[name]; !ok {
-		return fmt.Errorf("type %s, value %v is not found at tag", name, v)
-	}
-
-	f.setNonZeroValues(v)
-	return nil
-}
-
-// genAndInsertAss inserts the associations value into the database
-func insertAss(ctx context.Context, d db.Database, associations map[string][]interface{}, tagToInfo map[string]tagInfo) error {
-	if len(tagToInfo) == 0 {
-		return errors.New("tagToInfo is not set")
-	}
-
-	if len(associations) == 0 {
-		return errors.New("inserting associations without any associations")
-	}
-
-	for name, vals := range associations {
-		tableName := tagToInfo[name].tableName
-		if _, err := d.InsertList(ctx, db.InserListParams{StorageName: tableName, Values: vals}); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 // genTagToInfo generates the map from tag to metadata
 func genTagToInfo(dataType reflect.Type) (map[string]tagInfo, error) {
 	tagToInfo := map[string]tagInfo{}
@@ -347,10 +347,12 @@ func setFieldValue(target, source reflect.Value) {
 	target.SetUint(uint64(source.Int()))
 }
 
+// isIntType checks if the kind is an integer type
 func isIntType(k reflect.Kind) bool {
 	return k >= reflect.Int && k <= reflect.Int64
 }
 
+// isUintType checks if the kind is an unsigned integer type
 func isUintType(k reflect.Kind) bool {
 	return k >= reflect.Uint && k <= reflect.Uint64
 }

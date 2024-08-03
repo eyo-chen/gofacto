@@ -539,7 +539,7 @@ func (b *builderList[T]) WithMany(values []interface{}, ignoreFields ...string) 
 // setAss sets and inserts the associations
 func (b *builder[T]) setAss() error {
 	// insert the associations
-	if err := insertAss(b.ctx, b.f.db, b.f.associations, b.f.tagToInfo); err != nil {
+	if err := b.f.insertAss(b.ctx); err != nil {
 		return err
 	}
 
@@ -563,7 +563,7 @@ func (b *builder[T]) setAss() error {
 // setAss sets and inserts the associations
 func (b *builderList[T]) setAss() error {
 	// insert the associations
-	if err := insertAss(b.ctx, b.f.db, b.f.associations, b.f.tagToInfo); err != nil {
+	if err := b.f.insertAss(b.ctx); err != nil {
 		return err
 	}
 
