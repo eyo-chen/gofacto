@@ -292,9 +292,11 @@ func setForeignKey(target interface{}, name string, source interface{}) error {
 	return nil
 }
 
-// genTagToInfo generates the map from tag to metadata
-func genTagToInfo(dataType reflect.Type) (map[string]tagInfo, error) {
+// extractTag generates the map from tag to metadata
+func extractTag(dataType reflect.Type) (map[string]tagInfo, []string, error) {
 	tagToInfo := map[string]tagInfo{}
+	ignoreFields := []string{}
+
 	for i := 0; i < dataType.NumField(); i++ {
 		field := dataType.Field(i)
 		tag := field.Tag.Get(packageName)
@@ -304,14 +306,19 @@ func genTagToInfo(dataType reflect.Type) (map[string]tagInfo, error) {
 
 		parts := strings.Split(tag, ",")
 		if len(parts) == 0 {
-			return nil, errTagFormat
+			return tagToInfo, ignoreFields, errTagFormat
 		}
 
 		var structName, tableName, foreignField string
 		for _, p := range parts {
 			pairs := strings.Split(p, ":")
+			if len(pairs) == 1 && pairs[0] == "omit" {
+				ignoreFields = append(ignoreFields, field.Name)
+				continue
+			}
+
 			if len(pairs) != 2 {
-				return nil, errTagFormat
+				return tagToInfo, ignoreFields, errTagFormat
 			}
 
 			key, value := pairs[0], pairs[1]
@@ -323,7 +330,7 @@ func genTagToInfo(dataType reflect.Type) (map[string]tagInfo, error) {
 			case "foreignField":
 				foreignField = value
 			default:
-				return nil, errTagFormat
+				return tagToInfo, ignoreFields, errTagFormat
 			}
 		}
 
@@ -334,7 +341,7 @@ func genTagToInfo(dataType reflect.Type) (map[string]tagInfo, error) {
 		tagToInfo[structName] = tagInfo{tableName: tableName, fieldName: field.Name, foreignField: foreignField}
 	}
 
-	return tagToInfo, nil
+	return tagToInfo, ignoreFields, nil
 }
 
 // setIntValue sets the value of the source to the target,
