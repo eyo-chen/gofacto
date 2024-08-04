@@ -201,7 +201,7 @@ func TestCvtToPointerT(t *testing.T) {
 		},
 		{
 			desc: "vals is not empty",
-			vals: []interface{}{&Person{ID: 0, Name: "foo"}, &Person{ID: 2, Name: "bar"}, &Person{ID: 3, Name: "baz"}},
+			vals: []interface{}{&Person{ID: 1, Name: "foo"}, &Person{ID: 2, Name: "bar"}, &Person{ID: 3, Name: "baz"}},
 			want: []*Person{{ID: 1, Name: "foo"}, {ID: 2, Name: "bar"}, {ID: 3, Name: "baz"}},
 		},
 	}
