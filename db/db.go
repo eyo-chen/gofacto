@@ -1,6 +1,9 @@
 package db
 
-import "context"
+import (
+	"context"
+	"reflect"
+)
 
 // Database is responsible for inserting data into the database
 type Database interface {
@@ -9,6 +12,9 @@ type Database interface {
 
 	// insertList inserts a list of data into the database
 	InsertList(context.Context, InserListParams) ([]interface{}, error)
+
+	// GenCustomType generates a non-zero value for custom types
+	GenCustomType(reflect.Type) (interface{}, bool)
 }
 
 // InsertParams is a struct that holds the parameters for the Insert method

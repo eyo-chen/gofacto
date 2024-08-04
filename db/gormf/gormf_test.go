@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"gorm.io/datatypes"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 
@@ -36,22 +37,27 @@ type Author struct {
 	WebsiteURL          *string
 	FanCount            *int64
 	ProfilePicture      []byte
+	BornTime            datatypes.Time
+	BornTime1           *datatypes.Time
 }
 
 type Book struct {
-	ID              int64
-	AuthorID        int64 `gofacto:"Author,authors"`
-	Title           string
-	ISBN            *string
-	PublicationDate *time.Time
-	Genre           *string
-	Price           *float64
-	PageCount       *int32
-	Description     *string
-	InStock         bool
-	CoverImage      []byte
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	ID               int64
+	AuthorID         int64 `gofacto:"Author,authors"`
+	Title            string
+	ISBN             *string
+	PublicationDate  datatypes.Date
+	PublicationDate1 *datatypes.Date
+	Genre            *string
+	Price            *float64
+	PageCount        *int32
+	Description      *string
+	InStock          bool
+	CoverImage       []byte
+	Data             datatypes.JSON
+	Data1            *datatypes.JSON
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 type testingSuite struct {

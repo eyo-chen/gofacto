@@ -7,12 +7,14 @@ CREATE TABLE IF NOT EXISTS authors (
     email VARCHAR(100) UNIQUE,
     biography TEXT,
     is_active BOOLEAN DEFAULT TRUE,
-    rating DECIMAL(3,2),
+    rating DECIMAL(4,2),
     books_written INT UNSIGNED,
     last_publication_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     website_url VARCHAR(255),
     fan_count BIGINT UNSIGNED,
-    profile_picture BLOB
+    profile_picture BLOB,
+    born_time TIME,
+    born_time1 TIME
 );
 
 CREATE TABLE IF NOT EXISTS books (
@@ -21,12 +23,15 @@ CREATE TABLE IF NOT EXISTS books (
     title VARCHAR(255) NOT NULL,
     isbn CHAR(13) UNIQUE,
     publication_date DATE,
+    publication_date1 DATE,
     genre ENUM('Fiction', 'Non-Fiction', 'Science', 'History', 'Biography', 'Other'),
     price DECIMAL(10,2),
     page_count SMALLINT UNSIGNED,
     description TEXT,
     in_stock BOOLEAN DEFAULT TRUE,
     cover_image MEDIUMBLOB,
+    data JSON,
+    data1 JSON,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (author_id) REFERENCES authors(id) ON DELETE SET NULL

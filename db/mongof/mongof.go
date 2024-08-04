@@ -48,6 +48,10 @@ func (c *config) InsertList(ctx context.Context, params db.InserListParams) ([]i
 	return params.Values, nil
 }
 
+func (c *config) GenCustomType(t reflect.Type) (interface{}, bool) {
+	return nil, false
+}
+
 // setIDField sets the ID field of the value to the given ID
 func setIDField(val interface{}, id primitive.ObjectID) {
 	v := reflect.ValueOf(val).Elem().FieldByName("ID")
