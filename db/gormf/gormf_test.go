@@ -12,6 +12,7 @@ import (
 	"gorm.io/datatypes"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 
 	"github.com/eyo-chen/gofacto"
 	"github.com/eyo-chen/gofacto/internal/docker"
@@ -23,41 +24,42 @@ var (
 )
 
 type Author struct {
-	ID                  int64
-	FirstName           string
-	LastName            string
-	BirthDate           *time.Time
-	Nationality         *string
-	Email               *string
-	Biography           *string
-	IsActive            bool
-	Rating              *float64
-	BooksWritten        *int32
-	LastPublicationTime time.Time
-	WebsiteURL          *string
-	FanCount            *int64
-	ProfilePicture      []byte
-	BornTime            datatypes.Time
-	BornTime1           *datatypes.Time
+	ID                  int64           `gorm:"id;primaryKey"`
+	FirstName           string          `gorm:"first_name"`
+	LastName            string          `gorm:"last_name"`
+	BirthDate           *time.Time      `gorm:"birth_date"`
+	Nationality         *string         `gorm:"nationalality"`
+	Email               *string         `gorm:"email"`
+	Biography           *string         `gorm:"biography"`
+	IsActive            bool            `gorm:"is_active"`
+	Rating              *float64        `gorm:"rating"`
+	BooksWritten        *int32          `gorm:"books_written"`
+	LastPublicationTime time.Time       `gorm:"last_publication_time"`
+	WebsiteURL          *string         `gorm:"website_url"`
+	FanCount            *int64          `gorm:"fan_count"`
+	ProfilePicture      []byte          `gorm:"profile_picture"`
+	BornTime            datatypes.Time  `gorm:"born_time"`
+	BornTime1           *datatypes.Time `gorm:"born_time1"`
 }
 
 type Book struct {
-	ID               int64
-	AuthorID         int64 `gofacto:"Author,authors"`
-	Title            string
-	ISBN             *string
-	PublicationDate  datatypes.Date
-	PublicationDate1 *datatypes.Date
-	Genre            *string
-	Price            *float64
-	PageCount        *int32
-	Description      *string
-	InStock          bool
-	CoverImage       []byte
-	Data             datatypes.JSON
-	Data1            *datatypes.JSON
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	ID               int64           `gorm:"id;primaryKey"`
+	AuthorID         int64           `gorm:"author_id" gofacto:"struct:Author,foreignField:Author"`
+	Author           *Author         `gorm:"foreignKey:AuthorID"`
+	Title            string          `gorm:"title"`
+	ISBN             *string         `gorm:"isbn"`
+	PublicationDate  datatypes.Date  `gorm:"publication_date"`
+	PublicationDate1 *datatypes.Date `gorm:"publication_date1"`
+	Genre            *string         `gorm:"genre"`
+	Price            *float64        `gorm:"price"`
+	PageCount        *int32          `gorm:"page_count"`
+	Description      *string         `gorm:"description"`
+	InStock          bool            `gorm:"in_stock"`
+	CoverImage       []byte          `gorm:"cover_image"`
+	Data             datatypes.JSON  `gorm:"data"`
+	Data1            *datatypes.JSON `gorm:"data1"`
+	CreatedAt        time.Time       `gorm:"created_at"`
+	UpdatedAt        time.Time       `gorm:"updated_at"`
 }
 
 type testingSuite struct {
@@ -70,7 +72,9 @@ func (s *testingSuite) setupSuite() {
 	// start MySQL Docker container
 	port := docker.RunDocker(docker.ImageMySQL)
 	dsn := fmt.Sprintf("root:root@(localhost:%s)/mysql?parseTime=true", port)
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Info),
+	})
 	if err != nil {
 		log.Fatalf("gorm.Open failed: %s", err)
 	}
@@ -224,21 +228,16 @@ func (s *testingSuite) TestWithOne(t *testing.T) {
 
 	// prepare expected data
 	var book Book
-	if err := s.db.Where("author_id = ?", mockBook.AuthorID).First(&book).Error; err != nil {
+	if err := s.db.Where("author_id = ?", mockBook.AuthorID).Preload("Author").First(&book).Error; err != nil {
 		t.Fatalf("Failed to find book: %s", err)
 	}
 
-	var author Author
-	if err := s.db.First(&author, mockBook.AuthorID).Error; err != nil {
-		t.Fatalf("Failed to find author: %s", err)
-	}
-
 	// assertion
-	if err := testutils.CompareVal(mockBook, book, "PublicationDate", "CreatedAt", "UpdatedAt"); err != nil {
+	if err := testutils.CompareVal(mockBook, book, "PublicationDate", "CreatedAt", "UpdatedAt", "BirthDate", "LastPublicationTime"); err != nil {
 		t.Fatalf("Inserted book is not the same as the mock book: %s", err)
 	}
 
-	if err := testutils.CompareVal(mockAuthor, author, "BirthDate", "LastPublicationTime"); err != nil {
+	if err := testutils.CompareVal(mockAuthor, *book.Author, "BirthDate", "LastPublicationTime"); err != nil {
 		t.Fatalf("Inserted author is not the same as the mock author: %s", err)
 	}
 }
@@ -265,21 +264,16 @@ func (s *testingSuite) TestWithMany(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		// prepare expected data
 		var book Book
-		if err := s.db.Where("author_id = ?", mockBooks[i].AuthorID).First(&book).Error; err != nil {
+		if err := s.db.Where("author_id = ?", mockBooks[i].AuthorID).Preload("Author").First(&book).Error; err != nil {
 			t.Fatalf("Failed to find book: %s", err)
 		}
 
-		var author Author
-		if err := s.db.First(&author, mockBooks[i].AuthorID).Error; err != nil {
-			t.Fatalf("Failed to find author: %s", err)
-		}
-
 		// assertion
-		if err := testutils.CompareVal(mockBooks[i], book, "PublicationDate", "CreatedAt", "UpdatedAt"); err != nil {
+		if err := testutils.CompareVal(mockBooks[i], book, "PublicationDate", "CreatedAt", "UpdatedAt", "BirthDate", "LastPublicationTime"); err != nil {
 			t.Fatalf("Inserted book is not the same as the mock book: %s", err)
 		}
 
-		if err := testutils.CompareVal(mockAuthors[i], author, "BirthDate", "LastPublicationTime"); err != nil {
+		if err := testutils.CompareVal(mockAuthors[i], *book.Author, "BirthDate", "LastPublicationTime"); err != nil {
 			t.Fatalf("Inserted author is not the same as the mock author: %s", err)
 		}
 	}
@@ -297,21 +291,16 @@ func (s *testingSuite) TestListWithOne(t *testing.T) {
 
 	// prepare expected data
 	var books []Book
-	if err := s.db.Where("author_id = ?", mockBooks[0].AuthorID).Find(&books).Error; err != nil {
+	if err := s.db.Where("author_id = ?", mockBooks[0].AuthorID).Preload("Author").Find(&books).Error; err != nil {
 		t.Fatalf("Failed to find books: %s", err)
 	}
 
-	var author Author
-	if err := s.db.First(&author, mockBooks[0].AuthorID).Error; err != nil {
-		t.Fatalf("Failed to find author: %s", err)
-	}
-
 	// assertion
-	if err := testutils.CompareVal(mockBooks, books, "PublicationDate", "CreatedAt", "UpdatedAt"); err != nil {
+	if err := testutils.CompareVal(mockBooks, books, "PublicationDate", "CreatedAt", "UpdatedAt", "BirthDate", "LastPublicationTime"); err != nil {
 		t.Fatalf("Inserted books are not the same as the mock books: %s", err)
 	}
 
-	if err := testutils.CompareVal(mockAuthor, author, "BirthDate", "LastPublicationTime"); err != nil {
+	if err := testutils.CompareVal(mockAuthor, *books[0].Author, "BirthDate", "LastPublicationTime"); err != nil {
 		t.Fatalf("Inserted author is not the same as the mock author: %s", err)
 	}
 }
