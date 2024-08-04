@@ -39,7 +39,7 @@ type Author struct {
 
 type Book struct {
 	ID              int64
-	AuthorID        int64 `gofacto:"Author,authors"`
+	AuthorID        int64 `gofacto:"struct:Author"`
 	Title           string
 	ISBN            *string
 	PublicationDate *time.Time
