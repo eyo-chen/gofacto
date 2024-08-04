@@ -35,10 +35,6 @@ type Config[T any] struct {
 	// If not provided, camel case of the type name will be used.
 	StorageName string
 
-	// IgnoreFields is the list of fields to be ignored
-	// these fields will not be set to non-zero values
-	IgnoreFields []string
-
 	// isSetZeroValue is to determine if the zero value should be set.
 	// It is optional.
 	// If not provided, it will be default to true.
@@ -55,6 +51,7 @@ type Factory[T any] struct {
 	index          int
 	ignoreFields   []string
 	isSetZeroValue bool
+	errors         []error
 
 	// map from name to trait function
 	traits map[string]setTraiter[T]
@@ -101,13 +98,21 @@ type builderList[T any] struct {
 func New[T any](v T) *Factory[T] {
 	dataType := reflect.TypeOf(v)
 
+	var errs []error
+	ti, ifd, err := extractTag(dataType)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	return &Factory[T]{
 		dataType:       dataType,
 		empty:          reflect.New(dataType).Elem().Interface().(T),
 		associations:   map[string][]interface{}{},
-		tagToInfo:      map[string]tagInfo{},
+		tagToInfo:      ti,
+		ignoreFields:   ifd,
 		index:          1,
 		isSetZeroValue: true,
+		errors:         errs,
 	}
 }
 
@@ -115,7 +120,6 @@ func New[T any](v T) *Factory[T] {
 func (f *Factory[T]) SetConfig(c Config[T]) *Factory[T] {
 	f.bluePrint = c.BluePrint
 	f.db = c.DB
-	f.ignoreFields = c.IgnoreFields
 
 	if c.StorageName == "" {
 		f.storageName = fmt.Sprintf("%ss", utils.CamelToSnake(f.dataType.Name()))
@@ -158,10 +162,15 @@ func (f *Factory[T]) Build(ctx context.Context) *builder[T] {
 
 	f.index++
 
+	var errs []error
+	if len(f.errors) > 0 {
+		errs = append(errs, f.errors...)
+	}
+
 	return &builder[T]{
 		ctx:    ctx,
 		v:      &v,
-		errors: []error{},
+		errors: errs,
 		f:      f,
 	}
 }
@@ -187,6 +196,10 @@ func (f *Factory[T]) BuildList(ctx context.Context, n int) *builderList[T] {
 
 		list[i] = &v
 		f.index++
+	}
+
+	if len(f.errors) > 0 {
+		errs = append(errs, f.errors...)
 	}
 
 	return &builderList[T]{
@@ -449,16 +462,6 @@ func (b *builder[T]) WithOne(v interface{}, ignoreFields ...string) *builder[T] 
 		return b
 	}
 
-	// set tagToInfo if it's not set
-	if len(b.f.tagToInfo) == 0 {
-		t, err := genTagToInfo(b.f.dataType)
-		if err != nil {
-			b.errors = append(b.errors, err)
-			return b
-		}
-		b.f.tagToInfo = t
-	}
-
 	if err := b.f.setAssValue(v); err != nil {
 		b.errors = append(b.errors, err)
 		return b
@@ -476,16 +479,6 @@ func (b *builderList[T]) WithOne(v interface{}, ignoreFields ...string) *builder
 		return b
 	}
 
-	// set tagToInfo if it's not set
-	if len(b.f.tagToInfo) == 0 {
-		t, err := genTagToInfo(b.f.dataType)
-		if err != nil {
-			b.errors = append(b.errors, err)
-			return b
-		}
-		b.f.tagToInfo = t
-	}
-
 	if err := b.f.setAssValue(v); err != nil {
 		b.errors = append(b.errors, err)
 		return b
@@ -501,16 +494,6 @@ func (b *builderList[T]) WithOne(v interface{}, ignoreFields ...string) *builder
 func (b *builderList[T]) WithMany(values []interface{}, ignoreFields ...string) *builderList[T] {
 	if len(b.errors) > 0 {
 		return b
-	}
-
-	// set tagToInfo if it's not set
-	if len(b.f.tagToInfo) == 0 {
-		t, err := genTagToInfo(b.f.dataType)
-		if err != nil {
-			b.errors = append(b.errors, err)
-			return b
-		}
-		b.f.tagToInfo = t
 	}
 
 	var curValName string
