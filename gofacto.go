@@ -76,8 +76,9 @@ type setTraiter[T any] func(v *T)
 
 // tagInfo is the metadata for the tag
 type tagInfo struct {
-	tableName string
-	fieldName string
+	tableName    string
+	fieldName    string
+	foreignField string
 }
 
 // builder is for building a single value
@@ -545,12 +546,19 @@ func (b *builder[T]) setAss() error {
 
 	// set the connection between the factory value and the associations
 	for name, vals := range b.f.associations {
-		// use vs[0] because we can make sure insertAss only invoke with Build function
+		// use vs[0] because we can make sure setAss(builder) only invoke with Build function
 		// which means there's only one factory value
 		// so that each associations only allow one value
-		fieldName := b.f.tagToInfo[name].fieldName
-		if err := setField(b.v, fieldName, vals[0], "InsertWithAss"); err != nil {
+		t := b.f.tagToInfo[name]
+		if err := setForeignKey(b.v, t.fieldName, vals[0]); err != nil {
 			return err
+		}
+
+		// set the foreign field value if it's provided
+		if t.foreignField != "" {
+			if err := setField(b.v, t.foreignField, vals[0]); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -581,9 +589,16 @@ func (b *builderList[T]) setAss() error {
 				cachePrev[name] = vs[i]
 			}
 
-			fieldName := b.f.tagToInfo[name].fieldName
-			if err := setField(l, fieldName, v, "InsertWithAss"); err != nil {
+			t := b.f.tagToInfo[name]
+			if err := setForeignKey(l, t.fieldName, v); err != nil {
 				return err
+			}
+
+			// set the foreign field value if it's provided
+			if t.foreignField != "" {
+				if err := setField(l, t.foreignField, v); err != nil {
+					return err
+				}
 			}
 		}
 	}

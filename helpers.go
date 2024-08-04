@@ -17,6 +17,10 @@ const (
 	packageName = "gofacto"
 )
 
+var (
+	errTagFormat = errors.New("tag is in wrong format. It should be gofacto:\"struct:<structName>,table:<TableName>,foreignField:<ForeignField>\"")
+)
+
 // setNonZeroValues sets non-zero values to the given struct.
 // Parameter v must be a pointer to a struct
 func (f *Factory[T]) setNonZeroValues(v interface{}) {
@@ -263,28 +267,28 @@ func genNonZeroValue(t reflect.Type, i int) interface{} {
 	}
 }
 
-// setField sets the value to the name field of the target
-func setField(target interface{}, name string, source interface{}, sourceFn string) error {
+// setForeignKey sets the value of the source's ID field to the target's foreign key(name) field
+func setForeignKey(target interface{}, name string, source interface{}) error {
 	targetField := reflect.ValueOf(target).Elem().FieldByName(name)
 	if !targetField.IsValid() {
-		return fmt.Errorf("%s: field %s is not found", sourceFn, name)
+		return fmt.Errorf("field %s is not found", name)
 	}
 
 	if !targetField.CanSet() {
-		return fmt.Errorf("%s: field %s can not be set", sourceFn, name)
+		return fmt.Errorf("field %s can not be set", name)
 	}
 
 	sourceIDField := reflect.ValueOf(source).Elem().FieldByName("ID")
 	if !sourceIDField.IsValid() {
-		return fmt.Errorf("%s: source field ID is not found", sourceFn)
+		return fmt.Errorf("source field ID is not found")
 	}
 
 	sourceIDKind := sourceIDField.Kind()
 	if !isIntType(sourceIDKind) && !isUintType(sourceIDKind) {
-		return fmt.Errorf("%s: source field ID is not an integer", sourceFn)
+		return fmt.Errorf(" source field ID is not an integer")
 	}
 
-	setFieldValue(targetField, sourceIDField)
+	setIntValue(targetField, sourceIDField)
 	return nil
 }
 
@@ -300,28 +304,43 @@ func genTagToInfo(dataType reflect.Type) (map[string]tagInfo, error) {
 
 		parts := strings.Split(tag, ",")
 		if len(parts) == 0 {
-			return nil, errors.New("tag is in wrong format. It should be gofacto:\"<struct_name>,<table_name>\"")
+			return nil, errTagFormat
 		}
 
-		structName := parts[0]
+		var structName, tableName, foreignField string
+		for _, p := range parts {
+			pairs := strings.Split(p, ":")
+			if len(pairs) != 2 {
+				return nil, errTagFormat
+			}
 
-		var tableName string
-		if len(parts) == 2 {
-			tableName = parts[1]
-		} else {
+			key, value := pairs[0], pairs[1]
+			switch key {
+			case "struct":
+				structName = value
+			case "table":
+				tableName = value
+			case "foreignField":
+				foreignField = value
+			default:
+				return nil, errTagFormat
+			}
+		}
+
+		if tableName == "" {
 			tableName = utils.CamelToSnake(structName) + "s"
 		}
 
-		tagToInfo[structName] = tagInfo{tableName: tableName, fieldName: field.Name}
+		tagToInfo[structName] = tagInfo{tableName: tableName, fieldName: field.Name, foreignField: foreignField}
 	}
 
 	return tagToInfo, nil
 }
 
-// setFieldValue sets the value of the source to the target,
+// setIntValue sets the value of the source to the target,
 // and it also handles the conversion between int and uint.
 // Normally, it's used to set the ID field of the target struct
-func setFieldValue(target, source reflect.Value) {
+func setIntValue(target, source reflect.Value) {
 	targetKind := target.Kind()
 	sourceKind := source.Kind()
 
@@ -351,4 +370,32 @@ func isIntType(k reflect.Kind) bool {
 // isUintType checks if the kind is an unsigned integer type
 func isUintType(k reflect.Kind) bool {
 	return k >= reflect.Uint && k <= reflect.Uint64
+}
+
+// serField sets the value of the source to the field of the target
+func setField(target interface{}, fieldName string, source interface{}) error {
+	structValue := reflect.ValueOf(target).Elem()
+	fieldVal := structValue.FieldByName(fieldName)
+
+	if !fieldVal.IsValid() {
+		return fmt.Errorf("no such field: %s in target", fieldName)
+	}
+
+	if !fieldVal.CanSet() {
+		return fmt.Errorf("cannot set field %s", fieldName)
+	}
+
+	val := reflect.ValueOf(source)
+	if fieldVal.Kind() == reflect.Ptr && val.Kind() != reflect.Ptr {
+		newVal := reflect.New(val.Type())
+		newVal.Elem().Set(val)
+		val = newVal
+	}
+
+	if fieldVal.Type() != val.Type() {
+		return fmt.Errorf("provided value type didn't match obj field type")
+	}
+
+	fieldVal.Set(val)
+	return nil
 }
