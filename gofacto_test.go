@@ -2,11 +2,13 @@ package gofacto
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/eyo-chen/gofacto/internal/testutils"
+	"github.com/eyo-chen/gofacto/internal/types"
 	"github.com/eyo-chen/gofacto/utils"
 )
 
@@ -33,11 +35,12 @@ type testStruct struct {
 	PtrSlice       []*int
 	SliceStruct    []subStruct
 	SlicePtrStruct []*subStruct
+	privateField   string
 }
 
 type subStruct struct {
-	SubID   int
-	SubName string
+	ID   int
+	Name string
 }
 
 func TestBuild(t *testing.T) {
@@ -72,12 +75,13 @@ func build_BluePrintAllFields(t *testing.T) {
 			Float:          f,
 			PtrFloat:       &f,
 			Interface:      str,
-			Struct:         subStruct{SubID: i, SubName: str},
-			PtrStruct:      &subStruct{SubID: i, SubName: str},
+			Struct:         subStruct{ID: i, Name: str},
+			PtrStruct:      &subStruct{ID: i, Name: str},
 			Slice:          []int{i, i + 1, i + 2},
 			PtrSlice:       []*int{&i, &i, &i},
-			SliceStruct:    []subStruct{{SubID: i, SubName: str}, {SubID: i + 1, SubName: str}},
-			SlicePtrStruct: []*subStruct{{SubID: i, SubName: str}, {SubID: i + 1, SubName: str}},
+			SliceStruct:    []subStruct{{ID: i, Name: str}, {ID: i + 1, Name: str}},
+			SlicePtrStruct: []*subStruct{{ID: i, Name: str}, {ID: i + 1, Name: str}},
+			privateField:   str,
 		}
 	}
 	f := New(testStruct{}).SetConfig(Config[testStruct]{BluePrint: bluePrint})
@@ -106,12 +110,12 @@ func build_BluePrintAllFields(t *testing.T) {
 					Float:          f,
 					PtrFloat:       &f,
 					Interface:      str,
-					Struct:         subStruct{SubID: i1, SubName: str},
-					PtrStruct:      &subStruct{SubID: i1, SubName: str},
+					Struct:         subStruct{ID: i1, Name: str},
+					PtrStruct:      &subStruct{ID: i1, Name: str},
 					Slice:          []int{i1, i2, i3},
 					PtrSlice:       []*int{&i1, &i1, &i1},
-					SliceStruct:    []subStruct{{SubID: i1, SubName: str}, {SubID: i2, SubName: str}},
-					SlicePtrStruct: []*subStruct{{SubID: i1, SubName: str}, {SubID: i2, SubName: str}},
+					SliceStruct:    []subStruct{{ID: i1, Name: str}, {ID: i2, Name: str}},
+					SlicePtrStruct: []*subStruct{{ID: i1, Name: str}, {ID: i2, Name: str}},
 				}
 			},
 		},
@@ -135,12 +139,12 @@ func build_BluePrintAllFields(t *testing.T) {
 					Float:          f,
 					PtrFloat:       &f,
 					Interface:      str,
-					Struct:         subStruct{SubID: i2, SubName: str},
-					PtrStruct:      &subStruct{SubID: i2, SubName: str},
+					Struct:         subStruct{ID: i2, Name: str},
+					PtrStruct:      &subStruct{ID: i2, Name: str},
 					Slice:          []int{i2, i3, i4},
 					PtrSlice:       []*int{&i2, &i2, &i2},
-					SliceStruct:    []subStruct{{SubID: i2, SubName: str}, {SubID: i3, SubName: str}},
-					SlicePtrStruct: []*subStruct{{SubID: i2, SubName: str}, {SubID: i3, SubName: str}},
+					SliceStruct:    []subStruct{{ID: i2, Name: str}, {ID: i3, Name: str}},
+					SlicePtrStruct: []*subStruct{{ID: i2, Name: str}, {ID: i3, Name: str}},
 				}
 			},
 		},
@@ -150,11 +154,11 @@ func build_BluePrintAllFields(t *testing.T) {
 		t.Run(tt.desc, func(t *testing.T) {
 			got, err := f.Build(mockCTX).Get()
 			if err != nil {
-				t.Errorf("error from gofacto: %v", err)
+				t.Fatalf("unexpected error %v", err)
 			}
 
 			if err := testutils.CompareVal(got, tt.want()); err != nil {
-				t.Errorf(err.Error())
+				t.Fatalf(err.Error())
 			}
 		})
 	}
@@ -210,15 +214,15 @@ func build_BluePrintSomeFields(t *testing.T) {
 		t.Run(tt.desc, func(t *testing.T) {
 			got, err := f.Build(mockCTX).Get()
 			if err != nil {
-				t.Errorf("error from gofacto: %v", err)
+				t.Fatalf("unexpected error %v", err)
 			}
 
 			if err := testutils.CompareVal(got, tt.want(), testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Bool", "PtrBool")...); err != nil {
-				t.Errorf(err.Error())
+				t.Fatalf(err.Error())
 			}
 
 			if err := testutils.IsNotZeroVal(got, testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Bool", "PtrBool")...); err != nil {
-				t.Errorf(err.Error())
+				t.Fatalf(err.Error())
 			}
 		})
 	}
@@ -274,11 +278,11 @@ func build_BluePrintNotSetZeroValues(t *testing.T) {
 		t.Run(tt.desc, func(t *testing.T) {
 			got, err := f.Build(mockCTX).Get()
 			if err != nil {
-				t.Errorf("error from gofacto: %v", err)
+				t.Fatalf("unexpected error %v", err)
 			}
 
 			if err := testutils.CompareVal(got, tt.want()); err != nil {
-				t.Errorf(err.Error())
+				t.Fatalf(err.Error())
 			}
 		})
 	}
@@ -303,11 +307,11 @@ func build_NoBluePrint(t *testing.T) {
 		t.Run(tt.desc, func(t *testing.T) {
 			got, err := f.Build(mockCTX).Get()
 			if err != nil {
-				t.Errorf("error from gofacto: %v", err)
+				t.Fatalf("unexpected error %v", err)
 			}
 
 			if err := testutils.IsNotZeroVal(got, testutils.FilterFields(testStruct{})...); err != nil {
-				t.Errorf(err.Error())
+				t.Fatalf(err.Error())
 			}
 		})
 	}
@@ -334,17 +338,16 @@ func build_NoBluePrintNotSetZeroValues(t *testing.T) {
 		t.Run(tt.desc, func(t *testing.T) {
 			got, err := f.Build(mockCTX).Get()
 			if err != nil {
-				t.Errorf("error from gofacto: %v", err)
+				t.Fatalf("unexpected error %v", err)
 			}
 
 			if err := testutils.CompareVal(got, tt.want()); err != nil {
-				t.Errorf(err.Error())
+				t.Fatalf(err.Error())
 			}
 		})
 	}
 }
 
-// TODO: make error message more readable
 func build_IgnoreFields(t *testing.T) {
 	f := New(testStruct{}).SetConfig(Config[testStruct]{IgnoreFields: []string{"Int", "PtrInt", "Str", "PtrStr", "Incorrect field"}})
 
@@ -355,12 +358,12 @@ func build_IgnoreFields(t *testing.T) {
 	}{
 		{
 			desc:              "first build",
-			wantZeroFields:    []string{"Int", "PtrInt", "Str", "PtrStr", "Interface"},
+			wantZeroFields:    []string{"Int", "PtrInt", "Str", "PtrStr", "Interface", "privateField"},
 			wantNonZeroFields: testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Str", "PtrStr", "Interface"),
 		},
 		{
 			desc:              "second build",
-			wantZeroFields:    []string{"Int", "PtrInt", "Str", "PtrStr", "Interface"},
+			wantZeroFields:    []string{"Int", "PtrInt", "Str", "PtrStr", "Interface", "privateField"},
 			wantNonZeroFields: testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Str", "PtrStr", "Interface"),
 		},
 	}
@@ -369,15 +372,15 @@ func build_IgnoreFields(t *testing.T) {
 		t.Run(tt.desc, func(t *testing.T) {
 			got, err := f.Build(mockCTX).Get()
 			if err != nil {
-				t.Errorf("error from gofacto: %v", err)
+				t.Fatalf("unexpected error %v", err)
 			}
 
 			if err := testutils.IsZeroVal(got, tt.wantNonZeroFields...); err != nil {
-				t.Errorf(err.Error())
+				t.Fatalf(err.Error())
 			}
 
 			if err := testutils.IsNotZeroVal(got, tt.wantZeroFields...); err != nil {
-				t.Errorf(err.Error())
+				t.Fatalf(err.Error())
 			}
 		})
 	}
@@ -390,6 +393,8 @@ func TestBuildList(t *testing.T) {
 		"when pass buildList without setting zero values, other fileds remain zero value":   buildList_BluePrintNotSetZeroValues,
 		"when not pass buildList, all fields set by gofacto":                                buildList_NoBluePrint,
 		"when not pass buildList without setting zero values, all fields remain zero value": buildList_NoBluePrintNotSetZeroValues,
+		"when setting ignore fields, ignore fields should be zero value":                    buildList_IgnoreFields,
+		"when pass negative number, error should be returned":                               buildlist_PassNegativeNumber,
 	} {
 		t.Run(testutils.GetFunName(fn), func(t *testing.T) {
 			fn(t)
@@ -414,12 +419,12 @@ func buildList_BluePrintAllFields(t *testing.T) {
 			Float:          f,
 			PtrFloat:       &f,
 			Interface:      str,
-			Struct:         subStruct{SubID: i, SubName: str},
-			PtrStruct:      &subStruct{SubID: i, SubName: str},
+			Struct:         subStruct{ID: i, Name: str},
+			PtrStruct:      &subStruct{ID: i, Name: str},
 			Slice:          []int{i, i + 1, i + 2},
 			PtrSlice:       []*int{&i, &i, &i},
-			SliceStruct:    []subStruct{{SubID: i, SubName: str}, {SubID: i + 1, SubName: str}},
-			SlicePtrStruct: []*subStruct{{SubID: i, SubName: str}, {SubID: i + 1, SubName: str}},
+			SliceStruct:    []subStruct{{ID: i, Name: str}, {ID: i + 1, Name: str}},
+			SlicePtrStruct: []*subStruct{{ID: i, Name: str}, {ID: i + 1, Name: str}},
 		}
 	}
 	f := New(testStruct{}).SetConfig(Config[testStruct]{BluePrint: bluePrint})
@@ -449,12 +454,12 @@ func buildList_BluePrintAllFields(t *testing.T) {
 						Float:          f,
 						PtrFloat:       &f,
 						Interface:      str1,
-						Struct:         subStruct{SubID: i1, SubName: str1},
-						PtrStruct:      &subStruct{SubID: i1, SubName: str1},
+						Struct:         subStruct{ID: i1, Name: str1},
+						PtrStruct:      &subStruct{ID: i1, Name: str1},
 						Slice:          []int{i1, i2, i3},
 						PtrSlice:       []*int{&i1, &i1, &i1},
-						SliceStruct:    []subStruct{{SubID: i1, SubName: str1}, {SubID: i2, SubName: str1}},
-						SlicePtrStruct: []*subStruct{{SubID: i1, SubName: str1}, {SubID: i2, SubName: str1}},
+						SliceStruct:    []subStruct{{ID: i1, Name: str1}, {ID: i2, Name: str1}},
+						SlicePtrStruct: []*subStruct{{ID: i1, Name: str1}, {ID: i2, Name: str1}},
 					},
 					{
 						Int:            i4,
@@ -468,12 +473,12 @@ func buildList_BluePrintAllFields(t *testing.T) {
 						Float:          f,
 						PtrFloat:       &f,
 						Interface:      str2,
-						Struct:         subStruct{SubID: i2, SubName: str2},
-						PtrStruct:      &subStruct{SubID: i2, SubName: str2},
+						Struct:         subStruct{ID: i2, Name: str2},
+						PtrStruct:      &subStruct{ID: i2, Name: str2},
 						Slice:          []int{i2, i3, i4},
 						PtrSlice:       []*int{&i2, &i2, &i2},
-						SliceStruct:    []subStruct{{SubID: i2, SubName: str2}, {SubID: i3, SubName: str2}},
-						SlicePtrStruct: []*subStruct{{SubID: i2, SubName: str2}, {SubID: i3, SubName: str2}},
+						SliceStruct:    []subStruct{{ID: i2, Name: str2}, {ID: i3, Name: str2}},
+						SlicePtrStruct: []*subStruct{{ID: i2, Name: str2}, {ID: i3, Name: str2}},
 					},
 				}
 			},
@@ -499,12 +504,12 @@ func buildList_BluePrintAllFields(t *testing.T) {
 						Float:          f,
 						PtrFloat:       &f,
 						Interface:      str3,
-						Struct:         subStruct{SubID: i3, SubName: str3},
-						PtrStruct:      &subStruct{SubID: i3, SubName: str3},
+						Struct:         subStruct{ID: i3, Name: str3},
+						PtrStruct:      &subStruct{ID: i3, Name: str3},
 						Slice:          []int{i3, i4, i5},
 						PtrSlice:       []*int{&i3, &i3, &i3},
-						SliceStruct:    []subStruct{{SubID: i3, SubName: str3}, {SubID: i4, SubName: str3}},
-						SlicePtrStruct: []*subStruct{{SubID: i3, SubName: str3}, {SubID: i4, SubName: str3}},
+						SliceStruct:    []subStruct{{ID: i3, Name: str3}, {ID: i4, Name: str3}},
+						SlicePtrStruct: []*subStruct{{ID: i3, Name: str3}, {ID: i4, Name: str3}},
 					},
 					{
 						Int:            i8,
@@ -518,12 +523,12 @@ func buildList_BluePrintAllFields(t *testing.T) {
 						Float:          f,
 						PtrFloat:       &f,
 						Interface:      str4,
-						Struct:         subStruct{SubID: i4, SubName: str4},
-						PtrStruct:      &subStruct{SubID: i4, SubName: str4},
+						Struct:         subStruct{ID: i4, Name: str4},
+						PtrStruct:      &subStruct{ID: i4, Name: str4},
 						Slice:          []int{i4, i5, i6},
 						PtrSlice:       []*int{&i4, &i4, &i4},
-						SliceStruct:    []subStruct{{SubID: i4, SubName: str4}, {SubID: i5, SubName: str4}},
-						SlicePtrStruct: []*subStruct{{SubID: i4, SubName: str4}, {SubID: i5, SubName: str4}},
+						SliceStruct:    []subStruct{{ID: i4, Name: str4}, {ID: i5, Name: str4}},
+						SlicePtrStruct: []*subStruct{{ID: i4, Name: str4}, {ID: i5, Name: str4}},
 					},
 				}
 			},
@@ -534,11 +539,11 @@ func buildList_BluePrintAllFields(t *testing.T) {
 		t.Run(tt.desc, func(t *testing.T) {
 			got, err := f.BuildList(mockCTX, 2).Get()
 			if err != nil {
-				t.Errorf("error from gofacto: %v", err)
+				t.Fatalf("unexpected error %v", err)
 			}
 
 			if err := testutils.CompareVal(got, tt.want()); err != nil {
-				t.Errorf(err.Error())
+				t.Fatalf(err.Error())
 			}
 		})
 	}
@@ -549,8 +554,8 @@ func buildList_BluePrintSomeFields(t *testing.T) {
 		str := fmt.Sprintf("test%d", i)
 		return testStruct{
 			Int:            i * 2,
-			PtrStruct:      &subStruct{SubID: i, SubName: str},
-			SlicePtrStruct: []*subStruct{{SubID: i, SubName: str}, {SubID: i + 1, SubName: str}},
+			PtrStruct:      &subStruct{ID: i, Name: str},
+			SlicePtrStruct: []*subStruct{{ID: i, Name: str}, {ID: i + 1, Name: str}},
 		}
 	}
 	f := New(testStruct{}).SetConfig(Config[testStruct]{BluePrint: bluePrint})
@@ -568,13 +573,13 @@ func buildList_BluePrintSomeFields(t *testing.T) {
 				return []testStruct{
 					{
 						Int:            i2,
-						PtrStruct:      &subStruct{SubID: i1, SubName: str1},
-						SlicePtrStruct: []*subStruct{{SubID: i1, SubName: str1}, {SubID: i2, SubName: str1}},
+						PtrStruct:      &subStruct{ID: i1, Name: str1},
+						SlicePtrStruct: []*subStruct{{ID: i1, Name: str1}, {ID: i2, Name: str1}},
 					},
 					{
 						Int:            i4,
-						PtrStruct:      &subStruct{SubID: i2, SubName: str2},
-						SlicePtrStruct: []*subStruct{{SubID: i2, SubName: str2}, {SubID: i3, SubName: str2}},
+						PtrStruct:      &subStruct{ID: i2, Name: str2},
+						SlicePtrStruct: []*subStruct{{ID: i2, Name: str2}, {ID: i3, Name: str2}},
 					},
 				}
 			},
@@ -588,13 +593,13 @@ func buildList_BluePrintSomeFields(t *testing.T) {
 				return []testStruct{
 					{
 						Int:            i6,
-						PtrStruct:      &subStruct{SubID: i3, SubName: str3},
-						SlicePtrStruct: []*subStruct{{SubID: i3, SubName: str3}, {SubID: i4, SubName: str3}},
+						PtrStruct:      &subStruct{ID: i3, Name: str3},
+						SlicePtrStruct: []*subStruct{{ID: i3, Name: str3}, {ID: i4, Name: str3}},
 					},
 					{
 						Int:            i8,
-						PtrStruct:      &subStruct{SubID: i4, SubName: str4},
-						SlicePtrStruct: []*subStruct{{SubID: i4, SubName: str4}, {SubID: i5, SubName: str4}},
+						PtrStruct:      &subStruct{ID: i4, Name: str4},
+						SlicePtrStruct: []*subStruct{{ID: i4, Name: str4}, {ID: i5, Name: str4}},
 					},
 				}
 			},
@@ -605,15 +610,15 @@ func buildList_BluePrintSomeFields(t *testing.T) {
 		t.Run(tt.desc, func(t *testing.T) {
 			got, err := f.BuildList(mockCTX, 2).Get()
 			if err != nil {
-				t.Errorf("error from gofacto: %v", err)
+				t.Fatalf("unexpected error %v", err)
 			}
 
 			if err := testutils.CompareVal(got, tt.want(), testutils.FilterFields(testStruct{}, "Int", "PtrStruct", "SlicePtrStruct")...); err != nil {
-				t.Errorf(err.Error())
+				t.Fatalf(err.Error())
 			}
 
 			if err := testutils.IsNotZeroVal(got, testutils.FilterFields(testStruct{}, "Int", "PtrStruct", "SlicePtrStruct")...); err != nil {
-				t.Errorf(err.Error())
+				t.Fatalf(err.Error())
 			}
 		})
 	}
@@ -624,8 +629,8 @@ func buildList_BluePrintNotSetZeroValues(t *testing.T) {
 		str := fmt.Sprintf("test%d", i)
 		return testStruct{
 			Int:            i * 2,
-			PtrStruct:      &subStruct{SubID: i, SubName: str},
-			SlicePtrStruct: []*subStruct{{SubID: i, SubName: str}, {SubID: i + 1, SubName: str}},
+			PtrStruct:      &subStruct{ID: i, Name: str},
+			SlicePtrStruct: []*subStruct{{ID: i, Name: str}, {ID: i + 1, Name: str}},
 		}
 	}
 	f := New(testStruct{}).SetConfig(Config[testStruct]{BluePrint: bluePrint, IsSetZeroValue: utils.Bool(false)})
@@ -643,13 +648,13 @@ func buildList_BluePrintNotSetZeroValues(t *testing.T) {
 				return []testStruct{
 					{
 						Int:            i2,
-						PtrStruct:      &subStruct{SubID: i1, SubName: str1},
-						SlicePtrStruct: []*subStruct{{SubID: i1, SubName: str1}, {SubID: i2, SubName: str1}},
+						PtrStruct:      &subStruct{ID: i1, Name: str1},
+						SlicePtrStruct: []*subStruct{{ID: i1, Name: str1}, {ID: i2, Name: str1}},
 					},
 					{
 						Int:            i4,
-						PtrStruct:      &subStruct{SubID: i2, SubName: str2},
-						SlicePtrStruct: []*subStruct{{SubID: i2, SubName: str2}, {SubID: i3, SubName: str2}},
+						PtrStruct:      &subStruct{ID: i2, Name: str2},
+						SlicePtrStruct: []*subStruct{{ID: i2, Name: str2}, {ID: i3, Name: str2}},
 					},
 				}
 			},
@@ -663,13 +668,13 @@ func buildList_BluePrintNotSetZeroValues(t *testing.T) {
 				return []testStruct{
 					{
 						Int:            i6,
-						PtrStruct:      &subStruct{SubID: i3, SubName: str3},
-						SlicePtrStruct: []*subStruct{{SubID: i3, SubName: str3}, {SubID: i4, SubName: str3}},
+						PtrStruct:      &subStruct{ID: i3, Name: str3},
+						SlicePtrStruct: []*subStruct{{ID: i3, Name: str3}, {ID: i4, Name: str3}},
 					},
 					{
 						Int:            i8,
-						PtrStruct:      &subStruct{SubID: i4, SubName: str4},
-						SlicePtrStruct: []*subStruct{{SubID: i4, SubName: str4}, {SubID: i5, SubName: str4}},
+						PtrStruct:      &subStruct{ID: i4, Name: str4},
+						SlicePtrStruct: []*subStruct{{ID: i4, Name: str4}, {ID: i5, Name: str4}},
 					},
 				}
 			},
@@ -680,11 +685,11 @@ func buildList_BluePrintNotSetZeroValues(t *testing.T) {
 		t.Run(tt.desc, func(t *testing.T) {
 			got, err := f.BuildList(mockCTX, 2).Get()
 			if err != nil {
-				t.Errorf("error from gofacto: %v", err)
+				t.Fatalf("unexpected error %v", err)
 			}
 
 			if err := testutils.CompareVal(got, tt.want()); err != nil {
-				t.Errorf(err.Error())
+				t.Fatalf(err.Error())
 			}
 		})
 	}
@@ -708,11 +713,11 @@ func buildList_NoBluePrintNotSetZeroValues(t *testing.T) {
 		t.Run(tt.desc, func(t *testing.T) {
 			got, err := f.BuildList(mockCTX, 2).Get()
 			if err != nil {
-				t.Errorf("error from gofacto: %v", err)
+				t.Fatalf("unexpected error %v", err)
 			}
 
 			if err := testutils.IsNotZeroVal(got, testutils.FilterFields(testStruct{})...); err != nil {
-				t.Errorf(err.Error())
+				t.Fatalf(err.Error())
 			}
 		})
 	}
@@ -739,21 +744,130 @@ func buildList_NoBluePrint(t *testing.T) {
 		t.Run(tt.desc, func(t *testing.T) {
 			got, err := f.BuildList(mockCTX, 2).Get()
 			if err != nil {
-				t.Errorf("error from gofacto: %v", err)
+				t.Fatalf("unexpected error %v", err)
 			}
 
 			if err := testutils.CompareVal(got, tt.want()); err != nil {
-				t.Errorf(err.Error())
+				t.Fatalf(err.Error())
 			}
 		})
+	}
+}
+
+func buildList_IgnoreFields(t *testing.T) {
+	f := New(testStruct{}).SetConfig(Config[testStruct]{IgnoreFields: []string{"Int", "PtrInt", "Str", "PtrStr", "Incorrect field"}})
+
+	tests := []struct {
+		desc              string
+		wantZeroFields    []string
+		wantNonZeroFields []string
+	}{
+		{
+			desc:              "first build",
+			wantZeroFields:    []string{"Int", "PtrInt", "Str", "PtrStr", "Interface", "privateField"},
+			wantNonZeroFields: testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Str", "PtrStr", "Interface"),
+		},
+		{
+			desc:              "second build",
+			wantZeroFields:    []string{"Int", "PtrInt", "Str", "PtrStr", "Interface", "privateField"},
+			wantNonZeroFields: testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Str", "PtrStr", "Interface"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			got, err := f.BuildList(mockCTX, 2).Get()
+			if err != nil {
+				t.Fatalf("unexpected error %v", err)
+			}
+
+			if err := testutils.IsZeroVal(got, tt.wantNonZeroFields...); err != nil {
+				t.Fatalf(err.Error())
+			}
+
+			if err := testutils.IsNotZeroVal(got, tt.wantZeroFields...); err != nil {
+				t.Fatalf(err.Error())
+			}
+		})
+	}
+}
+
+func buildlist_PassNegativeNumber(t *testing.T) {
+	f := New(testStruct{})
+
+	want := []testStruct{}
+	wantErr := types.ErrBuildListNGreaterThanZero
+
+	got, err := f.BuildList(mockCTX, -1).Get()
+	if err == nil {
+		t.Fatalf("error should be returned")
+	}
+
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("error should be %v", wantErr)
+	}
+
+	if testutils.CompareVal(got, want) != nil {
+		t.Fatalf("got: %v, want: %v", got, want)
+	}
+}
+
+func TestInsert(t *testing.T) {
+	for _, fn := range map[string]func(*testing.T){
+		"when insert on builder without db, error should be returned":      insert_OnBuilder,
+		"when insert on builder list without db, error should be returned": insert_OnBuilderList,
+	} {
+		t.Run(testutils.GetFunName(fn), func(t *testing.T) {
+			fn(t)
+		})
+	}
+}
+
+func insert_OnBuilder(t *testing.T) {
+	f := New(testStruct{})
+
+	want := testStruct{}
+	wantErr := types.ErrDBIsNotProvided
+
+	vals, err := f.Build(mockCTX).Insert()
+	if err == nil {
+		t.Fatalf("error should be returned")
+	}
+
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("error should be %v", wantErr)
+	}
+
+	if testutils.CompareVal(vals, want) != nil {
+		t.Fatalf("got: %v, want: %v", vals, want)
+	}
+}
+
+func insert_OnBuilderList(t *testing.T) {
+	f := New(testStruct{})
+
+	want := []testStruct{}
+	wantErr := types.ErrDBIsNotProvided
+
+	vals, err := f.BuildList(mockCTX, 2).Insert()
+	if err == nil {
+		t.Fatalf("error should be returned")
+	}
+
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("error should be %v", wantErr)
+	}
+
+	if testutils.CompareVal(vals, want) != nil {
+		t.Fatalf("got: %v, want: %v", vals, want)
 	}
 }
 
 func TestOverwrite(t *testing.T) {
 	for _, fn := range map[string]func(*testing.T){
 		"when overwrite on builder, overwrite one value":           overwrite_OnBuilder,
-		"when overwrites on builder list, overwrite target values": overwrite_OnBuilderList,
-		"when overwrite on builder list, overwrite one value":      overwrite_OnBuilderListOneValue,
+		"when overwrite on builder list, overwrite one value":      overwrite_OnBuilderList,
+		"when overwrites on builder list, overwrite target values": overwrites_OnBuilderList,
 	} {
 		t.Run(testutils.GetFunName(fn), func(t *testing.T) {
 			fn(t)
@@ -766,8 +880,8 @@ func overwrite_OnBuilder(t *testing.T) {
 		str := fmt.Sprintf("test%d", i)
 		return testStruct{
 			Int:            i * 2,
-			PtrStruct:      &subStruct{SubID: i, SubName: str},
-			SlicePtrStruct: []*subStruct{{SubID: i, SubName: str}, {SubID: i + 1, SubName: str}},
+			PtrStruct:      &subStruct{ID: i, Name: str},
+			SlicePtrStruct: []*subStruct{{ID: i, Name: str}, {ID: i + 1, Name: str}},
 		}
 	}
 	f := New(testStruct{}).SetConfig(Config[testStruct]{BluePrint: bluePrint})
@@ -779,11 +893,11 @@ func overwrite_OnBuilder(t *testing.T) {
 	}{
 		{
 			desc: "overwrite with value",
-			ow:   testStruct{Int: 10, PtrStruct: &subStruct{SubID: 10, SubName: "test10"}},
+			ow:   testStruct{Int: 10, PtrStruct: &subStruct{ID: 10, Name: "test10"}},
 			want: testStruct{
 				Int:            10,
-				PtrStruct:      &subStruct{SubID: 10, SubName: "test10"},
-				SlicePtrStruct: []*subStruct{{SubID: 1, SubName: "test1"}, {SubID: 2, SubName: "test1"}},
+				PtrStruct:      &subStruct{ID: 10, Name: "test10"},
+				SlicePtrStruct: []*subStruct{{ID: 1, Name: "test1"}, {ID: 2, Name: "test1"}},
 			},
 		},
 		{
@@ -791,8 +905,8 @@ func overwrite_OnBuilder(t *testing.T) {
 			ow:   testStruct{},
 			want: testStruct{
 				Int:            4,
-				PtrStruct:      &subStruct{SubID: 2, SubName: "test2"},
-				SlicePtrStruct: []*subStruct{{SubID: 2, SubName: "test2"}, {SubID: 3, SubName: "test2"}},
+				PtrStruct:      &subStruct{ID: 2, Name: "test2"},
+				SlicePtrStruct: []*subStruct{{ID: 2, Name: "test2"}, {ID: 3, Name: "test2"}},
 			},
 		},
 	}
@@ -801,11 +915,11 @@ func overwrite_OnBuilder(t *testing.T) {
 		t.Run(tt.desc, func(t *testing.T) {
 			got, err := f.Build(mockCTX).Overwrite(tt.ow).Get()
 			if err != nil {
-				t.Errorf("error from gofacto: %v", err)
+				t.Fatalf("unexpected error %v", err)
 			}
 
 			if err := testutils.CompareVal(got, tt.want, testutils.FilterFields(testStruct{}, "Int", "PtrStruct", "SlicePtrStruct")...); err != nil {
-				t.Errorf(err.Error())
+				t.Fatalf(err.Error())
 			}
 		})
 	}
@@ -816,8 +930,72 @@ func overwrite_OnBuilderList(t *testing.T) {
 		str := fmt.Sprintf("test%d", i)
 		return testStruct{
 			Int:            i * 2,
-			PtrStruct:      &subStruct{SubID: i, SubName: str},
-			SlicePtrStruct: []*subStruct{{SubID: i, SubName: str}, {SubID: i + 1, SubName: str}},
+			PtrStruct:      &subStruct{ID: i, Name: str},
+			SlicePtrStruct: []*subStruct{{ID: i, Name: str}, {ID: i + 1, Name: str}},
+		}
+	}
+	f := New(testStruct{}).SetConfig(Config[testStruct]{BluePrint: bluePrint})
+
+	tests := []struct {
+		desc string
+		ow   testStruct
+		want []testStruct
+	}{
+		{
+			desc: "overwrite with value",
+			ow:   testStruct{Int: 10, PtrStruct: &subStruct{ID: 10, Name: "test10"}},
+			want: []testStruct{
+				{
+					Int:            10,
+					PtrStruct:      &subStruct{ID: 10, Name: "test10"},
+					SlicePtrStruct: []*subStruct{{ID: 1, Name: "test1"}, {ID: 2, Name: "test1"}},
+				},
+				{
+					Int:            10,
+					PtrStruct:      &subStruct{ID: 10, Name: "test10"},
+					SlicePtrStruct: []*subStruct{{ID: 2, Name: "test2"}, {ID: 3, Name: "test2"}},
+				},
+			},
+		},
+		{
+			desc: "overwrite without value",
+			ow:   testStruct{},
+			want: []testStruct{
+				{
+					Int:            6,
+					PtrStruct:      &subStruct{ID: 3, Name: "test3"},
+					SlicePtrStruct: []*subStruct{{ID: 3, Name: "test3"}, {ID: 4, Name: "test3"}},
+				},
+				{
+					Int:            8,
+					PtrStruct:      &subStruct{ID: 4, Name: "test4"},
+					SlicePtrStruct: []*subStruct{{ID: 4, Name: "test4"}, {ID: 5, Name: "test4"}},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			got, err := f.BuildList(mockCTX, 2).Overwrite(tt.ow).Get()
+			if err != nil {
+				t.Fatalf("unexpected error %v", err)
+			}
+
+			if err := testutils.CompareVal(got, tt.want, testutils.FilterFields(testStruct{}, "Int", "PtrStruct", "SlicePtrStruct")...); err != nil {
+				t.Fatalf(err.Error())
+			}
+		})
+	}
+}
+
+func overwrites_OnBuilderList(t *testing.T) {
+	bluePrint := func(i int, val testStruct) testStruct {
+		str := fmt.Sprintf("test%d", i)
+		return testStruct{
+			Int:            i * 2,
+			PtrStruct:      &subStruct{ID: i, Name: str},
+			SlicePtrStruct: []*subStruct{{ID: i, Name: str}, {ID: i + 1, Name: str}},
 		}
 	}
 	f := New(testStruct{}).SetConfig(Config[testStruct]{BluePrint: bluePrint})
@@ -830,58 +1008,58 @@ func overwrite_OnBuilderList(t *testing.T) {
 		{
 			desc: "overwrite with same length",
 			ow: []testStruct{
-				{Int: 10, PtrStruct: &subStruct{SubID: 10, SubName: "test10"}},
-				{Int: 20, PtrStruct: &subStruct{SubID: 20, SubName: "test20"}},
+				{Int: 10, PtrStruct: &subStruct{ID: 10, Name: "test10"}},
+				{Int: 20, PtrStruct: &subStruct{ID: 20, Name: "test20"}},
 			},
 			want: []testStruct{
 				{
 					Int:            10,
-					PtrStruct:      &subStruct{SubID: 10, SubName: "test10"},
-					SlicePtrStruct: []*subStruct{{SubID: 1, SubName: "test1"}, {SubID: 2, SubName: "test1"}},
+					PtrStruct:      &subStruct{ID: 10, Name: "test10"},
+					SlicePtrStruct: []*subStruct{{ID: 1, Name: "test1"}, {ID: 2, Name: "test1"}},
 				},
 				{
 					Int:            20,
-					PtrStruct:      &subStruct{SubID: 20, SubName: "test20"},
-					SlicePtrStruct: []*subStruct{{SubID: 2, SubName: "test2"}, {SubID: 3, SubName: "test2"}},
+					PtrStruct:      &subStruct{ID: 20, Name: "test20"},
+					SlicePtrStruct: []*subStruct{{ID: 2, Name: "test2"}, {ID: 3, Name: "test2"}},
 				},
 			},
 		},
 		{
 			desc: "overwrite with longer length",
 			ow: []testStruct{
-				{Int: 10, PtrStruct: &subStruct{SubID: 10, SubName: "test10"}},
-				{Int: 20, PtrStruct: &subStruct{SubID: 20, SubName: "test20"}},
-				{Int: 30, PtrStruct: &subStruct{SubID: 30, SubName: "test30"}},
-				{Int: 40, PtrStruct: &subStruct{SubID: 40, SubName: "test40"}},
+				{Int: 10, PtrStruct: &subStruct{ID: 10, Name: "test10"}},
+				{Int: 20, PtrStruct: &subStruct{ID: 20, Name: "test20"}},
+				{Int: 30, PtrStruct: &subStruct{ID: 30, Name: "test30"}},
+				{Int: 40, PtrStruct: &subStruct{ID: 40, Name: "test40"}},
 			},
 			want: []testStruct{
 				{
 					Int:            10,
-					PtrStruct:      &subStruct{SubID: 10, SubName: "test10"},
-					SlicePtrStruct: []*subStruct{{SubID: 3, SubName: "test3"}, {SubID: 4, SubName: "test3"}},
+					PtrStruct:      &subStruct{ID: 10, Name: "test10"},
+					SlicePtrStruct: []*subStruct{{ID: 3, Name: "test3"}, {ID: 4, Name: "test3"}},
 				},
 				{
 					Int:            20,
-					PtrStruct:      &subStruct{SubID: 20, SubName: "test20"},
-					SlicePtrStruct: []*subStruct{{SubID: 4, SubName: "test4"}, {SubID: 5, SubName: "test4"}},
+					PtrStruct:      &subStruct{ID: 20, Name: "test20"},
+					SlicePtrStruct: []*subStruct{{ID: 4, Name: "test4"}, {ID: 5, Name: "test4"}},
 				},
 			},
 		},
 		{
 			desc: "overwrite with shorter length",
 			ow: []testStruct{
-				{Int: 10, PtrStruct: &subStruct{SubID: 10, SubName: "test10"}},
+				{Int: 10, PtrStruct: &subStruct{ID: 10, Name: "test10"}},
 			},
 			want: []testStruct{
 				{
 					Int:            10,
-					PtrStruct:      &subStruct{SubID: 10, SubName: "test10"},
-					SlicePtrStruct: []*subStruct{{SubID: 5, SubName: "test5"}, {SubID: 6, SubName: "test5"}},
+					PtrStruct:      &subStruct{ID: 10, Name: "test10"},
+					SlicePtrStruct: []*subStruct{{ID: 5, Name: "test5"}, {ID: 6, Name: "test5"}},
 				},
 				{
 					Int:            12,
-					PtrStruct:      &subStruct{SubID: 6, SubName: "test6"},
-					SlicePtrStruct: []*subStruct{{SubID: 6, SubName: "test6"}, {SubID: 7, SubName: "test6"}},
+					PtrStruct:      &subStruct{ID: 6, Name: "test6"},
+					SlicePtrStruct: []*subStruct{{ID: 6, Name: "test6"}, {ID: 7, Name: "test6"}},
 				},
 			},
 		},
@@ -891,13 +1069,13 @@ func overwrite_OnBuilderList(t *testing.T) {
 			want: []testStruct{
 				{
 					Int:            14,
-					PtrStruct:      &subStruct{SubID: 7, SubName: "test7"},
-					SlicePtrStruct: []*subStruct{{SubID: 7, SubName: "test7"}, {SubID: 8, SubName: "test7"}},
+					PtrStruct:      &subStruct{ID: 7, Name: "test7"},
+					SlicePtrStruct: []*subStruct{{ID: 7, Name: "test7"}, {ID: 8, Name: "test7"}},
 				},
 				{
 					Int:            16,
-					PtrStruct:      &subStruct{SubID: 8, SubName: "test8"},
-					SlicePtrStruct: []*subStruct{{SubID: 8, SubName: "test8"}, {SubID: 9, SubName: "test8"}},
+					PtrStruct:      &subStruct{ID: 8, Name: "test8"},
+					SlicePtrStruct: []*subStruct{{ID: 8, Name: "test8"}, {ID: 9, Name: "test8"}},
 				},
 			},
 		},
@@ -907,75 +1085,11 @@ func overwrite_OnBuilderList(t *testing.T) {
 		t.Run(tt.desc, func(t *testing.T) {
 			got, err := f.BuildList(mockCTX, 2).Overwrites(tt.ow...).Get()
 			if err != nil {
-				t.Errorf("error from gofacto: %v", err)
+				t.Fatalf("unexpected error %v", err)
 			}
 
 			if err := testutils.CompareVal(got, tt.want, testutils.FilterFields(testStruct{}, "Int", "PtrStruct", "SlicePtrStruct")...); err != nil {
-				t.Errorf(err.Error())
-			}
-		})
-	}
-}
-
-func overwrite_OnBuilderListOneValue(t *testing.T) {
-	bluePrint := func(i int, val testStruct) testStruct {
-		str := fmt.Sprintf("test%d", i)
-		return testStruct{
-			Int:            i * 2,
-			PtrStruct:      &subStruct{SubID: i, SubName: str},
-			SlicePtrStruct: []*subStruct{{SubID: i, SubName: str}, {SubID: i + 1, SubName: str}},
-		}
-	}
-	f := New(testStruct{}).SetConfig(Config[testStruct]{BluePrint: bluePrint})
-
-	tests := []struct {
-		desc string
-		ow   testStruct
-		want []testStruct
-	}{
-		{
-			desc: "overwrite with value",
-			ow:   testStruct{Int: 10, PtrStruct: &subStruct{SubID: 10, SubName: "test10"}},
-			want: []testStruct{
-				{
-					Int:            10,
-					PtrStruct:      &subStruct{SubID: 10, SubName: "test10"},
-					SlicePtrStruct: []*subStruct{{SubID: 1, SubName: "test1"}, {SubID: 2, SubName: "test1"}},
-				},
-				{
-					Int:            10,
-					PtrStruct:      &subStruct{SubID: 10, SubName: "test10"},
-					SlicePtrStruct: []*subStruct{{SubID: 2, SubName: "test2"}, {SubID: 3, SubName: "test2"}},
-				},
-			},
-		},
-		{
-			desc: "overwrite without value",
-			ow:   testStruct{},
-			want: []testStruct{
-				{
-					Int:            6,
-					PtrStruct:      &subStruct{SubID: 3, SubName: "test3"},
-					SlicePtrStruct: []*subStruct{{SubID: 3, SubName: "test3"}, {SubID: 4, SubName: "test3"}},
-				},
-				{
-					Int:            8,
-					PtrStruct:      &subStruct{SubID: 4, SubName: "test4"},
-					SlicePtrStruct: []*subStruct{{SubID: 4, SubName: "test4"}, {SubID: 5, SubName: "test4"}},
-				},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.desc, func(t *testing.T) {
-			got, err := f.BuildList(mockCTX, 2).Overwrite(tt.ow).Get()
-			if err != nil {
-				t.Errorf("error from gofacto: %v", err)
-			}
-
-			if err := testutils.CompareVal(got, tt.want, testutils.FilterFields(testStruct{}, "Int", "PtrStruct", "SlicePtrStruct")...); err != nil {
-				t.Errorf(err.Error())
+				t.Fatalf(err.Error())
 			}
 		})
 	}
@@ -1007,14 +1121,13 @@ func withTrait_OnBuilder(t *testing.T) {
 		val.Slice = []int{1, 1, 1}
 	}
 
-	f := New(testStruct{}).SetConfig(Config[testStruct]{BluePrint: bluePrint}).
-		SetTrait("trait", setTraiter)
+	f := New(testStruct{}).SetConfig(Config[testStruct]{BluePrint: bluePrint}).SetTrait("trait", setTraiter)
 
 	tests := []struct {
-		desc     string
-		trait    string
-		want     func() testStruct
-		hasError bool
+		desc    string
+		trait   string
+		want    func() testStruct
+		wantErr error
 	}{
 		{
 			desc:  "set trait with correct value",
@@ -1027,13 +1140,13 @@ func withTrait_OnBuilder(t *testing.T) {
 					Slice:  []int{1, 1, 1},
 				}
 			},
-			hasError: false,
+			wantErr: nil,
 		},
 		{
-			desc:     "set trait with incorrect value",
-			trait:    "incorrect trait",
-			want:     func() testStruct { return testStruct{} },
-			hasError: true,
+			desc:    "set trait with incorrect value",
+			trait:   "incorrect trait",
+			want:    func() testStruct { return testStruct{} },
+			wantErr: types.ErrWithTraitNameNotFound,
 		},
 	}
 
@@ -1041,24 +1154,20 @@ func withTrait_OnBuilder(t *testing.T) {
 		t.Run(tt.desc, func(t *testing.T) {
 			got, err := f.Build(mockCTX).WithTrait(tt.trait).Get()
 
-			if tt.hasError {
-				if err == nil {
-					t.Errorf("error should be occurred")
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("error should be %v", tt.wantErr)
 				}
 
 				if err := testutils.CompareVal(got, tt.want()); err != nil {
-					t.Errorf(err.Error())
+					t.Fatalf(err.Error())
 				}
 
 				return
 			}
 
-			if err != nil {
-				t.Errorf("error from gofacto: %v", err)
-			}
-
 			if err := testutils.CompareVal(got, tt.want(), testutils.FilterFields(testStruct{}, "PtrStr", "Time", "Slice")...); err != nil {
-				t.Errorf(err.Error())
+				t.Fatalf(err.Error())
 			}
 		})
 	}
@@ -1077,14 +1186,13 @@ func withTrait_OnBuilderList(t *testing.T) {
 		val.Slice = []int{1, 1, 1}
 	}
 
-	f := New(testStruct{}).SetConfig(Config[testStruct]{BluePrint: bluePrint}).
-		SetTrait("trait", setTraiter)
+	f := New(testStruct{}).SetConfig(Config[testStruct]{BluePrint: bluePrint}).SetTrait("trait", setTraiter)
 
 	tests := []struct {
-		desc     string
-		taits    []string
-		want     func() []testStruct
-		hasError bool
+		desc    string
+		taits   []string
+		want    func() []testStruct
+		wantErr error
 	}{
 		{
 			desc:  "set trait with same length",
@@ -1104,7 +1212,7 @@ func withTrait_OnBuilderList(t *testing.T) {
 					},
 				}
 			},
-			hasError: false,
+			wantErr: nil,
 		},
 		{
 			desc:  "set trait with longer length",
@@ -1124,7 +1232,7 @@ func withTrait_OnBuilderList(t *testing.T) {
 					},
 				}
 			},
-			hasError: false,
+			wantErr: nil,
 		},
 		{
 			desc:  "set trait with shorter length",
@@ -1144,13 +1252,13 @@ func withTrait_OnBuilderList(t *testing.T) {
 					},
 				}
 			},
-			hasError: false,
+			wantErr: nil,
 		},
 		{
-			desc:     "set trait with incorrect value",
-			taits:    []string{"incorrect trait"},
-			want:     func() []testStruct { return []testStruct{} },
-			hasError: true,
+			desc:    "set trait with incorrect value",
+			taits:   []string{"incorrect trait"},
+			want:    func() []testStruct { return []testStruct{} },
+			wantErr: types.ErrWithTraitNameNotFound,
 		},
 	}
 
@@ -1158,24 +1266,24 @@ func withTrait_OnBuilderList(t *testing.T) {
 		t.Run(tt.desc, func(t *testing.T) {
 			got, err := f.BuildList(mockCTX, 2).WithTraits(tt.taits...).Get()
 
-			if tt.hasError {
-				if err == nil {
-					t.Errorf("error should be occurred")
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("error should be %v", tt.wantErr)
 				}
 
 				if err := testutils.CompareVal(got, tt.want()); err != nil {
-					t.Errorf(err.Error())
+					t.Fatalf(err.Error())
 				}
 
 				return
 			}
 
 			if err != nil {
-				t.Errorf("error from gofacto: %v", err)
+				t.Fatalf("unexpected error %v", err)
 			}
 
 			if err := testutils.CompareVal(got, tt.want(), testutils.FilterFields(testStruct{}, "PtrStr", "Time", "Slice")...); err != nil {
-				t.Errorf(err.Error())
+				t.Fatalf(err.Error())
 			}
 		})
 	}
@@ -1194,14 +1302,13 @@ func withTrait_OnBuilderListOneValue(t *testing.T) {
 		val.Slice = []int{1, 1, 1}
 	}
 
-	f := New(testStruct{}).SetConfig(Config[testStruct]{BluePrint: bluePrint}).
-		SetTrait("trait", setTraiter)
+	f := New(testStruct{}).SetConfig(Config[testStruct]{BluePrint: bluePrint}).SetTrait("trait", setTraiter)
 
 	tests := []struct {
-		desc     string
-		tait     string
-		want     func() []testStruct
-		hasError bool
+		desc    string
+		tait    string
+		want    func() []testStruct
+		wantErr error
 	}{
 		{
 			desc: "set trait with correct value",
@@ -1221,13 +1328,13 @@ func withTrait_OnBuilderListOneValue(t *testing.T) {
 					},
 				}
 			},
-			hasError: false,
+			wantErr: nil,
 		},
 		{
-			desc:     "set trait with incorrect value",
-			tait:     "incorrect trait",
-			want:     func() []testStruct { return []testStruct{} },
-			hasError: true,
+			desc:    "set trait with incorrect value",
+			tait:    "incorrect trait",
+			want:    func() []testStruct { return []testStruct{} },
+			wantErr: types.ErrWithTraitNameNotFound,
 		},
 	}
 
@@ -1235,24 +1342,24 @@ func withTrait_OnBuilderListOneValue(t *testing.T) {
 		t.Run(tt.desc, func(t *testing.T) {
 			got, err := f.BuildList(mockCTX, 2).WithTrait(tt.tait).Get()
 
-			if tt.hasError {
-				if err == nil {
-					t.Errorf("error should be occurred")
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("error should be %v", tt.wantErr)
 				}
 
 				if err := testutils.CompareVal(got, tt.want()); err != nil {
-					t.Errorf(err.Error())
+					t.Fatalf(err.Error())
 				}
 
 				return
 			}
 
 			if err != nil {
-				t.Errorf("error from gofacto: %v", err)
+				t.Fatalf("unexpected error %v", err)
 			}
 
 			if err := testutils.CompareVal(got, tt.want(), testutils.FilterFields(testStruct{}, "PtrStr", "Time", "Slice")...); err != nil {
-				t.Errorf(err.Error())
+				t.Fatalf(err.Error())
 			}
 		})
 	}
@@ -1279,10 +1386,10 @@ func withTrait_OnBuilderMultiple(t *testing.T) {
 		SetTrait("trait2", setTraiter2)
 
 	tests := []struct {
-		desc     string
-		taits    []string
-		want     func() testStruct
-		hasError bool
+		desc    string
+		taits   []string
+		want    func() testStruct
+		wantErr error
 	}{
 		{
 			desc:  "set two traits with correct value",
@@ -1295,19 +1402,19 @@ func withTrait_OnBuilderMultiple(t *testing.T) {
 					Slice:  []int{2, 2, 2},
 				}
 			},
-			hasError: false,
+			wantErr: nil,
 		},
 		{
-			desc:     "set one trait with incorrect value",
-			taits:    []string{"trait1", "incorrect trait"},
-			want:     func() testStruct { return testStruct{} },
-			hasError: true,
+			desc:    "set one trait with incorrect value",
+			taits:   []string{"trait1", "incorrect trait"},
+			want:    func() testStruct { return testStruct{} },
+			wantErr: types.ErrWithTraitNameNotFound,
 		},
 		{
-			desc:     "set two traits with incorrect value",
-			taits:    []string{"incorrect trait1", "incorrect trait2"},
-			want:     func() testStruct { return testStruct{} },
-			hasError: true,
+			desc:    "set two traits with incorrect value",
+			taits:   []string{"incorrect trait1", "incorrect trait2"},
+			want:    func() testStruct { return testStruct{} },
+			wantErr: types.ErrWithTraitNameNotFound,
 		},
 	}
 
@@ -1315,24 +1422,24 @@ func withTrait_OnBuilderMultiple(t *testing.T) {
 		t.Run(tt.desc, func(t *testing.T) {
 			got, err := f.Build(mockCTX).WithTrait(tt.taits[0]).WithTrait(tt.taits[1]).Get()
 
-			if tt.hasError {
-				if err == nil {
-					t.Errorf("error should be occurred")
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("error should be %v", tt.wantErr)
 				}
 
 				if err := testutils.CompareVal(got, tt.want()); err != nil {
-					t.Errorf(err.Error())
+					t.Fatalf(err.Error())
 				}
 
 				return
 			}
 
 			if err != nil {
-				t.Errorf("error from gofacto: %v", err)
+				t.Fatalf("unexpected error %v", err)
 			}
 
 			if err := testutils.CompareVal(got, tt.want(), testutils.FilterFields(testStruct{}, "PtrStr", "Time", "Slice")...); err != nil {
-				t.Errorf(err.Error())
+				t.Fatalf(err.Error())
 			}
 		})
 	}
@@ -1365,12 +1472,12 @@ func setZero_OnBuilderWithBluePrint(t *testing.T) {
 			Float:          f,
 			PtrFloat:       &f,
 			Interface:      str,
-			Struct:         subStruct{SubID: i, SubName: str},
-			PtrStruct:      &subStruct{SubID: i, SubName: str},
+			Struct:         subStruct{ID: i, Name: str},
+			PtrStruct:      &subStruct{ID: i, Name: str},
 			Slice:          []int{i, i + 1, i + 2},
 			PtrSlice:       []*int{&i, &i, &i},
-			SliceStruct:    []subStruct{{SubID: i, SubName: str}, {SubID: i + 1, SubName: str}},
-			SlicePtrStruct: []*subStruct{{SubID: i, SubName: str}, {SubID: i + 1, SubName: str}},
+			SliceStruct:    []subStruct{{ID: i, Name: str}, {ID: i + 1, Name: str}},
+			SlicePtrStruct: []*subStruct{{ID: i, Name: str}, {ID: i + 1, Name: str}},
 		}
 	}
 	f := New(testStruct{}).SetConfig(Config[testStruct]{BluePrint: bluePrint})
@@ -1380,35 +1487,41 @@ func setZero_OnBuilderWithBluePrint(t *testing.T) {
 		setZeroFields     []string
 		wantZeroFields    []string
 		wantNonZeroFields []string
-		hasError          bool
+		wantErr           error
 		want              testStruct
 	}{
 		{
 			desc:              "set many zero values",
 			setZeroFields:     []string{"Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct"},
-			wantZeroFields:    []string{"Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct"},
+			wantZeroFields:    []string{"Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct", "privateField"},
 			wantNonZeroFields: testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct"),
-			hasError:          false,
+			wantErr:           nil,
 		},
 		{
 			desc:              "set one zero value",
 			setZeroFields:     []string{"Int"},
-			wantZeroFields:    []string{"Int"},
+			wantZeroFields:    []string{"Int", "privateField"},
 			wantNonZeroFields: testutils.FilterFields(testStruct{}, "Int"),
-			hasError:          false,
+			wantErr:           nil,
 		},
 		{
 			desc:              "set no zero value",
 			setZeroFields:     []string{},
-			wantZeroFields:    []string{},
+			wantZeroFields:    []string{"privateField"},
 			wantNonZeroFields: testutils.FilterFields(testStruct{}),
-			hasError:          false,
+			wantErr:           nil,
 		},
 		{
 			desc:          "set incorrect field",
 			setZeroFields: []string{"incorrect field"},
-			hasError:      true,
 			want:          testStruct{},
+			wantErr:       types.ErrFieldNotFound,
+		},
+		{
+			desc:          "set private field",
+			setZeroFields: []string{"privateField"},
+			want:          testStruct{},
+			wantErr:       types.ErrFieldCantSet,
 		},
 	}
 
@@ -1416,28 +1529,28 @@ func setZero_OnBuilderWithBluePrint(t *testing.T) {
 		t.Run(tt.desc, func(t *testing.T) {
 			got, err := f.Build(mockCTX).SetZero(tt.setZeroFields...).Get()
 
-			if tt.hasError {
-				if err == nil {
-					t.Errorf("error should be occurred")
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("error should be %v", tt.wantErr)
 				}
 
 				if err := testutils.CompareVal(got, tt.want); err != nil {
-					t.Errorf(err.Error())
+					t.Fatalf(err.Error())
 				}
 
 				return
 			}
 
 			if err != nil {
-				t.Errorf("error from gofacto: %v", err)
+				t.Fatalf("unexpected error %v", err)
 			}
 
 			if err := testutils.IsZeroVal(got, tt.wantNonZeroFields...); err != nil {
-				t.Errorf(err.Error())
+				t.Fatalf(err.Error())
 			}
 
 			if err := testutils.IsNotZeroVal(got, tt.wantZeroFields...); err != nil {
-				t.Errorf(err.Error())
+				t.Fatalf(err.Error())
 			}
 		})
 	}
@@ -1451,37 +1564,43 @@ func setZero_OnBuilderWithoutBluePrint(t *testing.T) {
 		setZeroFields     []string
 		wantZeroFields    []string
 		wantNonZeroFields []string
-		hasError          bool
 		want              testStruct
+		wantErr           error
 	}{
 		{
 			desc:              "set many zero values",
 			setZeroFields:     []string{"Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct"},
-			wantZeroFields:    []string{"Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct"},
+			wantZeroFields:    []string{"Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct", "privateField"},
 			wantNonZeroFields: testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct"),
-			hasError:          false,
+			wantErr:           nil,
 		},
 		{
 			desc:          "set one zero value",
 			setZeroFields: []string{"Int"},
 			// interface value will default set to nil
-			wantZeroFields:    []string{"Int", "Interface"},
+			wantZeroFields:    []string{"Int", "Interface", "privateField"},
 			wantNonZeroFields: testutils.FilterFields(testStruct{}, "Int", "Interface"),
-			hasError:          false,
+			wantErr:           nil,
 		},
 		{
 			desc:          "set no zero value",
 			setZeroFields: []string{},
 			// interface value will default set to nil
-			wantZeroFields:    []string{"Interface"},
+			wantZeroFields:    []string{"Interface", "privateField"},
 			wantNonZeroFields: testutils.FilterFields(testStruct{}),
-			hasError:          false,
+			wantErr:           nil,
 		},
 		{
 			desc:          "set incorrect field",
 			setZeroFields: []string{"incorrect field"},
-			hasError:      true,
 			want:          testStruct{},
+			wantErr:       types.ErrFieldNotFound,
+		},
+		{
+			desc:          "set private field",
+			setZeroFields: []string{"privateField"},
+			want:          testStruct{},
+			wantErr:       types.ErrFieldCantSet,
 		},
 	}
 
@@ -1489,28 +1608,28 @@ func setZero_OnBuilderWithoutBluePrint(t *testing.T) {
 		t.Run(tt.desc, func(t *testing.T) {
 			got, err := f.Build(mockCTX).SetZero(tt.setZeroFields...).Get()
 
-			if tt.hasError {
-				if err == nil {
-					t.Errorf("error should be occurred")
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("error should be %v", tt.wantErr)
 				}
 
 				if err := testutils.CompareVal(got, tt.want); err != nil {
-					t.Errorf(err.Error())
+					t.Fatalf(err.Error())
 				}
 
 				return
 			}
 
 			if err != nil {
-				t.Errorf("error from gofacto: %v", err)
+				t.Fatalf("unexpected error %v", err)
 			}
 
 			if err := testutils.IsZeroVal(got, tt.wantNonZeroFields...); err != nil {
-				t.Errorf(err.Error())
+				t.Fatalf(err.Error())
 			}
 
 			if err := testutils.IsNotZeroVal(got, tt.wantZeroFields...); err != nil {
-				t.Errorf(err.Error())
+				t.Fatalf(err.Error())
 			}
 		})
 	}
@@ -1528,12 +1647,12 @@ func setZero_OnBuilderListWithBluePrint(t *testing.T) {
 			Float:          f,
 			PtrFloat:       &f,
 			Interface:      str,
-			Struct:         subStruct{SubID: i, SubName: str},
-			PtrStruct:      &subStruct{SubID: i, SubName: str},
+			Struct:         subStruct{ID: i, Name: str},
+			PtrStruct:      &subStruct{ID: i, Name: str},
 			Slice:          []int{i, i + 1, i + 2},
 			PtrSlice:       []*int{&i, &i, &i},
-			SliceStruct:    []subStruct{{SubID: i, SubName: str}, {SubID: i + 1, SubName: str}},
-			SlicePtrStruct: []*subStruct{{SubID: i, SubName: str}, {SubID: i + 1, SubName: str}},
+			SliceStruct:    []subStruct{{ID: i, Name: str}, {ID: i + 1, Name: str}},
+			SlicePtrStruct: []*subStruct{{ID: i, Name: str}, {ID: i + 1, Name: str}},
 		}
 	}
 	f := New(testStruct{}).SetConfig(Config[testStruct]{BluePrint: bluePrint})
@@ -1544,41 +1663,48 @@ func setZero_OnBuilderListWithBluePrint(t *testing.T) {
 		setZeroFields     []string
 		wantZeroFields    [][]string
 		wantNonZeroFields [][]string
-		hasErro           bool
 		want              []testStruct
+		wantErr           error
 	}{
 		{
 			desc:          "set zero values at valid index",
 			index:         1,
 			setZeroFields: []string{"Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct"},
 			wantZeroFields: [][]string{
-				{""},
-				{"Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct"},
+				{"privateField"},
+				{"Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct", "privateField"},
 			},
 			wantNonZeroFields: [][]string{
 				{"Int", "PtrInt", "Str", "PtrStr", "Bool", "PtrBool", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct"},
 				testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct"),
 			},
-			hasErro: false,
+			wantErr: nil,
 		},
 		{
 			desc:    "set zero values at negative index",
 			index:   -1,
-			hasErro: true,
 			want:    []testStruct{},
+			wantErr: types.ErrIndexIsOutOfRange,
 		},
 		{
 			desc:    "set zero values at invalid index",
 			index:   5,
-			hasErro: true,
 			want:    []testStruct{},
+			wantErr: types.ErrIndexIsOutOfRange,
 		},
 		{
 			desc:          "set incorrect field",
 			index:         0,
 			setZeroFields: []string{"incorrect field"},
-			hasErro:       true,
 			want:          []testStruct{},
+			wantErr:       types.ErrFieldNotFound,
+		},
+		{
+			desc:          "set private field",
+			index:         0,
+			setZeroFields: []string{"privateField"},
+			want:          []testStruct{},
+			wantErr:       types.ErrFieldCantSet,
 		},
 	}
 
@@ -1586,29 +1712,29 @@ func setZero_OnBuilderListWithBluePrint(t *testing.T) {
 		t.Run(tt.desc, func(t *testing.T) {
 			got, err := f.BuildList(mockCTX, 2).SetZero(tt.index, tt.setZeroFields...).Get()
 
-			if tt.hasErro {
-				if err == nil {
-					t.Errorf("error should be occurred")
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("error should be %v", tt.wantErr)
 				}
 
 				if err := testutils.CompareVal(got, tt.want); err != nil {
-					t.Errorf(err.Error())
+					t.Fatalf(err.Error())
 				}
 
 				return
 			}
 
 			if err != nil {
-				t.Errorf("error from gofacto: %v", err)
+				t.Fatalf("unexpected error %v", err)
 			}
 
 			for i, g := range got {
 				if err := testutils.IsZeroVal(g, tt.wantNonZeroFields[i]...); err != nil {
-					t.Errorf(err.Error())
+					t.Fatalf(err.Error())
 				}
 
 				if err := testutils.IsNotZeroVal(g, tt.wantZeroFields[i]...); err != nil {
-					t.Errorf(err.Error())
+					t.Fatalf(err.Error())
 				}
 			}
 		})
@@ -1624,41 +1750,48 @@ func setZero_OnBuilderListWithoutBluePrint(t *testing.T) {
 		setZeroFields     []string
 		wantZeroFields    [][]string
 		wantNonZeroFields [][]string
-		hasErro           bool
 		want              []testStruct
+		wantErr           error
 	}{
 		{
 			desc:          "set zero values at valid index",
 			index:         1,
 			setZeroFields: []string{"Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct"},
 			wantZeroFields: [][]string{
-				{"Interface"},
-				{"Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Struct", "PtrStruct", "Interface", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct"},
+				{"Interface", "privateField"},
+				{"Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Struct", "PtrStruct", "Interface", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct", "privateField"},
 			},
 			wantNonZeroFields: [][]string{
 				testutils.FilterFields(testStruct{}, "Interface"),
 				testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Struct", "PtrStruct", "Interface", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct"),
 			},
-			hasErro: false,
+			wantErr: nil,
 		},
 		{
 			desc:    "set zero values at negative index",
 			index:   -1,
-			hasErro: true,
 			want:    []testStruct{},
+			wantErr: types.ErrIndexIsOutOfRange,
 		},
 		{
 			desc:    "set zero values at invalid index",
 			index:   5,
-			hasErro: true,
 			want:    []testStruct{},
+			wantErr: types.ErrIndexIsOutOfRange,
 		},
 		{
 			desc:          "set incorrect field",
 			index:         0,
 			setZeroFields: []string{"incorrect field"},
-			hasErro:       true,
 			want:          []testStruct{},
+			wantErr:       types.ErrFieldNotFound,
+		},
+		{
+			desc:          "set private field",
+			index:         0,
+			setZeroFields: []string{"privateField"},
+			want:          []testStruct{},
+			wantErr:       types.ErrFieldCantSet,
 		},
 	}
 
@@ -1666,29 +1799,29 @@ func setZero_OnBuilderListWithoutBluePrint(t *testing.T) {
 		t.Run(tt.desc, func(t *testing.T) {
 			got, err := f.BuildList(mockCTX, 2).SetZero(tt.index, tt.setZeroFields...).Get()
 
-			if tt.hasErro {
-				if err == nil {
-					t.Errorf("error should be occurred")
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("error should be %v", tt.wantErr)
 				}
 
 				if err := testutils.CompareVal(got, tt.want); err != nil {
-					t.Errorf(err.Error())
+					t.Fatalf(err.Error())
 				}
 
 				return
 			}
 
 			if err != nil {
-				t.Errorf("error from gofacto: %v", err)
+				t.Fatalf("unexpected error %v", err)
 			}
 
 			for i, g := range got {
 				if err := testutils.IsZeroVal(g, tt.wantNonZeroFields[i]...); err != nil {
-					t.Errorf(err.Error())
+					t.Fatalf(err.Error())
 				}
 
 				if err := testutils.IsNotZeroVal(g, tt.wantZeroFields[i]...); err != nil {
-					t.Errorf(err.Error())
+					t.Fatalf(err.Error())
 				}
 			}
 		})
@@ -1703,8 +1836,8 @@ func setZero_OnBuilderMany(t *testing.T) {
 		setZeroFields     [][]string
 		wantZeroFields    []string
 		wantNonZeroFields []string
-		hasError          bool
 		want              testStruct
+		wantErr           error
 	}{
 		{
 			desc: "set two zero values",
@@ -1712,9 +1845,9 @@ func setZero_OnBuilderMany(t *testing.T) {
 				{"Int"},
 				{"Slice"},
 			},
-			wantZeroFields:    []string{"Int", "Slice", "Interface"},
+			wantZeroFields:    []string{"Int", "Slice", "Interface", "privateField"},
 			wantNonZeroFields: testutils.FilterFields(testStruct{}, "Int", "Slice", "Interface"),
-			hasError:          false,
+			wantErr:           nil,
 		},
 		{
 			desc: "set three zero values",
@@ -1723,15 +1856,21 @@ func setZero_OnBuilderMany(t *testing.T) {
 				{"Slice"},
 				{"Struct"},
 			},
-			wantZeroFields:    []string{"Int", "Slice", "Struct", "Interface"},
+			wantZeroFields:    []string{"Int", "Slice", "Struct", "Interface", "privateField"},
 			wantNonZeroFields: testutils.FilterFields(testStruct{}, "Int", "Slice", "Struct", "Interface"),
-			hasError:          false,
+			wantErr:           nil,
 		},
 		{
 			desc:          "set incorrect field",
 			setZeroFields: [][]string{{"incorrect field"}},
-			hasError:      true,
 			want:          testStruct{},
+			wantErr:       types.ErrFieldNotFound,
+		},
+		{
+			desc:          "set private field",
+			setZeroFields: [][]string{{"privateField"}},
+			want:          testStruct{},
+			wantErr:       types.ErrFieldCantSet,
 		},
 	}
 
@@ -1744,29 +1883,28 @@ func setZero_OnBuilderMany(t *testing.T) {
 
 			got, err := preF.Get()
 
-			if tt.hasError {
-				if err == nil {
-					t.Errorf("error should be occurred")
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("error should be %v", tt.wantErr)
 				}
 
 				if err := testutils.CompareVal(got, tt.want); err != nil {
-					t.Errorf(err.Error())
+					t.Fatalf(err.Error())
 				}
 
 				return
 			}
 
-			// TODO: the error message should be more specific
 			if err != nil {
-				t.Errorf("error from gofacto: %v", err)
+				t.Fatalf("unexpected error %v", err)
 			}
 
 			if err := testutils.IsZeroVal(got, tt.wantNonZeroFields...); err != nil {
-				t.Errorf(err.Error())
+				t.Fatalf(err.Error())
 			}
 
 			if err := testutils.IsNotZeroVal(got, tt.wantZeroFields...); err != nil {
-				t.Errorf(err.Error())
+				t.Fatalf(err.Error())
 			}
 		})
 	}
@@ -1782,7 +1920,7 @@ func setZero_OnBuilderListMany(t *testing.T) {
 		wantZeroFields       [][]string
 		wantNonZeroFields    [][]string
 		want                 []testStruct
-		hasError             bool
+		wantErr              error
 	}{
 		{
 			desc:       "set zero values at valid index",
@@ -1792,16 +1930,16 @@ func setZero_OnBuilderListMany(t *testing.T) {
 				1: {"PtrSlice", "SlicePtrStruct"},
 			},
 			wantZeroFields: [][]string{
-				{"Int", "Interface"},
-				{"PtrSlice", "SlicePtrStruct", "Interface"},
-				{"Interface"},
+				{"Int", "Interface", "privateField", "privateField"},
+				{"PtrSlice", "SlicePtrStruct", "Interface", "privateField", "privateField"},
+				{"Interface", "privateField", "privateField"},
 			},
 			wantNonZeroFields: [][]string{
 				testutils.FilterFields(testStruct{}, "Int", "Interface"),
 				testutils.FilterFields(testStruct{}, "PtrSlice", "SlicePtrStruct", "Interface"),
 				testutils.FilterFields(testStruct{}, "Interface"),
 			},
-			hasError: false,
+			wantErr: nil,
 		},
 		{
 			desc:       "set zero values at negative index",
@@ -1810,8 +1948,8 @@ func setZero_OnBuilderListMany(t *testing.T) {
 				-1: {"Int"},
 				0:  {"PtrSlice", "SlicePtrStruct"},
 			},
-			want:     []testStruct{},
-			hasError: true,
+			want:    []testStruct{},
+			wantErr: types.ErrIndexIsOutOfRange,
 		},
 		{
 			desc:       "set zero values at invalid index",
@@ -1820,8 +1958,8 @@ func setZero_OnBuilderListMany(t *testing.T) {
 				5: {"Int"},
 				0: {"PtrSlice", "SlicePtrStruct"},
 			},
-			want:     []testStruct{},
-			hasError: true,
+			want:    []testStruct{},
+			wantErr: types.ErrIndexIsOutOfRange,
 		},
 		{
 			desc:       "set incorrect field",
@@ -1829,8 +1967,17 @@ func setZero_OnBuilderListMany(t *testing.T) {
 			setZeroFieldsByIndex: map[int][]string{
 				0: {"incorrect field"},
 			},
-			want:     []testStruct{},
-			hasError: true,
+			want:    []testStruct{},
+			wantErr: types.ErrFieldNotFound,
+		},
+		{
+			desc:       "set private field",
+			buildIndex: 3,
+			setZeroFieldsByIndex: map[int][]string{
+				0: {"privateField"},
+			},
+			want:    []testStruct{},
+			wantErr: types.ErrFieldCantSet,
 		},
 	}
 
@@ -1843,29 +1990,29 @@ func setZero_OnBuilderListMany(t *testing.T) {
 
 			got, err := preF.Get()
 
-			if tt.hasError {
-				if err == nil {
-					t.Errorf("error should be occurred")
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("error should be %v", tt.wantErr)
 				}
 
 				if err := testutils.CompareVal(got, tt.want); err != nil {
-					t.Errorf(err.Error())
+					t.Fatalf(err.Error())
 				}
 
 				return
 			}
 
 			if err != nil {
-				t.Errorf("error from gofacto: %v", err)
+				t.Fatalf("unexpected error %v", err)
 			}
 
 			for i, g := range got {
 				if err := testutils.IsZeroVal(g, tt.wantNonZeroFields[i]...); err != nil {
-					t.Errorf(err.Error())
+					t.Fatalf(err.Error())
 				}
 
 				if err := testutils.IsNotZeroVal(g, tt.wantZeroFields[i]...); err != nil {
-					t.Errorf(err.Error())
+					t.Fatalf(err.Error())
 				}
 			}
 		})

@@ -2,11 +2,11 @@ package gofacto
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"reflect"
 
 	"github.com/eyo-chen/gofacto/db"
+	"github.com/eyo-chen/gofacto/internal/types"
 	"github.com/eyo-chen/gofacto/internal/utils"
 )
 
@@ -83,18 +83,18 @@ type tagInfo struct {
 
 // builder is for building a single value
 type builder[T any] struct {
-	ctx    context.Context
-	v      *T
-	errors []error
-	f      *Factory[T]
+	ctx context.Context
+	v   *T
+	err error
+	f   *Factory[T]
 }
 
 // builderList is for building a list of values
 type builderList[T any] struct {
-	ctx    context.Context
-	list   []*T
-	errors []error
-	f      *Factory[T]
+	ctx  context.Context
+	list []*T
+	err  error
+	f    *Factory[T]
 }
 
 // New creates a new gofacto factory
@@ -108,6 +108,7 @@ func New[T any](v T) *Factory[T] {
 		tagToInfo:      map[string]tagInfo{},
 		index:          1,
 		isSetZeroValue: true,
+		traits:         map[string]setTraiter[T]{},
 	}
 }
 
@@ -132,10 +133,6 @@ func (f *Factory[T]) SetConfig(c Config[T]) *Factory[T] {
 
 // SetTrait adds a trait to the factory
 func (f *Factory[T]) SetTrait(name string, tr setTraiter[T]) *Factory[T] {
-	if f.traits == nil {
-		f.traits = map[string]setTraiter[T]{}
-	}
-
 	f.traits[name] = tr
 	return f
 }
@@ -159,22 +156,20 @@ func (f *Factory[T]) Build(ctx context.Context) *builder[T] {
 	f.index++
 
 	return &builder[T]{
-		ctx:    ctx,
-		v:      &v,
-		errors: []error{},
-		f:      f,
+		ctx: ctx,
+		v:   &v,
+		f:   f,
+		err: nil,
 	}
 }
 
 // BuildList creates a list of n values
 func (f *Factory[T]) BuildList(ctx context.Context, n int) *builderList[T] {
-	list := make([]*T, n)
-	errs := []error{}
 	if n < 1 {
-		errs = append(errs, errors.New("BuildList: n must be greater than 0"))
-		return &builderList[T]{errors: errs}
+		return &builderList[T]{err: types.ErrBuildListNGreaterThanZero, f: f}
 	}
 
+	list := make([]*T, n)
 	for i := 0; i < n; i++ {
 		var v T
 		if f.bluePrint != nil {
@@ -190,17 +185,17 @@ func (f *Factory[T]) BuildList(ctx context.Context, n int) *builderList[T] {
 	}
 
 	return &builderList[T]{
-		ctx:    ctx,
-		list:   list,
-		errors: errs,
-		f:      f,
+		ctx:  ctx,
+		list: list,
+		err:  nil,
+		f:    f,
 	}
 }
 
 // Get returns the value
 func (b *builder[T]) Get() (T, error) {
-	if len(b.errors) > 0 {
-		return b.f.empty, genFinalError(b.errors)
+	if b.err != nil {
+		return b.f.empty, b.err
 	}
 
 	return *b.v, nil
@@ -208,8 +203,8 @@ func (b *builder[T]) Get() (T, error) {
 
 // Get returns the list of values
 func (b *builderList[T]) Get() ([]T, error) {
-	if len(b.errors) > 0 {
-		return nil, genFinalError(b.errors)
+	if b.err != nil {
+		return nil, b.err
 	}
 
 	output := make([]T, len(b.list))
@@ -222,12 +217,12 @@ func (b *builderList[T]) Get() ([]T, error) {
 
 // Insert inserts the value into the database
 func (b *builder[T]) Insert() (T, error) {
-	if len(b.errors) > 0 {
-		return b.f.empty, genFinalError(b.errors)
+	if b.err != nil {
+		return b.f.empty, b.err
 	}
 
 	if b.f.db == nil {
-		return b.f.empty, errors.New("DB connection is not provided")
+		return b.f.empty, types.ErrDBIsNotProvided
 	}
 
 	if len(b.f.associations) > 0 {
@@ -243,7 +238,7 @@ func (b *builder[T]) Insert() (T, error) {
 
 	v, ok := val.(*T)
 	if !ok {
-		return b.f.empty, errors.New("Insert: can't convert to pointer")
+		return b.f.empty, types.ErrCantCvtToPtr
 	}
 
 	return *v, nil
@@ -251,12 +246,12 @@ func (b *builder[T]) Insert() (T, error) {
 
 // Insert inserts the list of values into the database
 func (b *builderList[T]) Insert() ([]T, error) {
-	if len(b.errors) > 0 {
-		return nil, genFinalError(b.errors)
+	if b.err != nil {
+		return nil, b.err
 	}
 
 	if b.f.db == nil {
-		return nil, errors.New("DB connection is not provided")
+		return nil, types.ErrDBIsNotProvided
 	}
 
 	if len(b.f.associations) > 0 {
@@ -280,7 +275,7 @@ func (b *builderList[T]) Insert() ([]T, error) {
 	for i, val := range vals {
 		v, ok := val.(*T)
 		if !ok {
-			return nil, errors.New("Insert: can't convert to pointer")
+			return nil, types.ErrCantCvtToPtr
 		}
 
 		output[i] = *v
@@ -291,12 +286,13 @@ func (b *builderList[T]) Insert() ([]T, error) {
 
 // Overwrite overwrites the value with the given value
 func (b *builder[T]) Overwrite(ow T) *builder[T] {
-	if len(b.errors) > 0 {
+	if b.err != nil {
 		return b
 	}
 
 	if err := copyValues(b.v, ow); err != nil {
-		b.errors = append(b.errors, err)
+		b.err = err
+		return b
 	}
 
 	return b
@@ -304,13 +300,13 @@ func (b *builder[T]) Overwrite(ow T) *builder[T] {
 
 // Overwrites overwrites the values with the given values
 func (b *builderList[T]) Overwrites(ows ...T) *builderList[T] {
-	if len(b.errors) > 0 {
+	if b.err != nil {
 		return b
 	}
 
 	for i := 0; i < len(ows) && i < len(b.list); i++ {
 		if err := copyValues(b.list[i], ows[i]); err != nil {
-			b.errors = append(b.errors, err)
+			b.err = err
 			return b
 		}
 	}
@@ -320,13 +316,13 @@ func (b *builderList[T]) Overwrites(ows ...T) *builderList[T] {
 
 // Overwrite overwrites the values with the given one value
 func (b *builderList[T]) Overwrite(ow T) *builderList[T] {
-	if len(b.errors) > 0 {
+	if b.err != nil {
 		return b
 	}
 
 	for i := 0; i < len(b.list); i++ {
 		if err := copyValues(b.list[i], ow); err != nil {
-			b.errors = append(b.errors, err)
+			b.err = err
 			return b
 		}
 	}
@@ -336,13 +332,13 @@ func (b *builderList[T]) Overwrite(ow T) *builderList[T] {
 
 // WithTrait invokes the traiter based on given name
 func (b *builder[T]) WithTrait(name string) *builder[T] {
-	if len(b.errors) > 0 {
+	if b.err != nil {
 		return b
 	}
 
 	tr, ok := b.f.traits[name]
 	if !ok {
-		b.errors = append(b.errors, fmt.Errorf("WithTrait: %s is not defiend at SetTrait", name))
+		b.err = fmt.Errorf("%w: %s", types.ErrWithTraitNameNotFound, name)
 		return b
 	}
 
@@ -353,14 +349,14 @@ func (b *builder[T]) WithTrait(name string) *builder[T] {
 
 // WithTraits invokes the traiter based on given names
 func (b *builderList[T]) WithTraits(names ...string) *builderList[T] {
-	if len(b.errors) > 0 {
+	if b.err != nil {
 		return b
 	}
 
 	for i := 0; i < len(names) && i < len(b.list); i++ {
 		tr, ok := b.f.traits[names[i]]
 		if !ok {
-			b.errors = append(b.errors, fmt.Errorf("WithTrait: %s is not defiend at SetTrait", names[i]))
+			b.err = fmt.Errorf("%w: %s", types.ErrWithTraitNameNotFound, names[i])
 			return b
 		}
 
@@ -372,13 +368,13 @@ func (b *builderList[T]) WithTraits(names ...string) *builderList[T] {
 
 // WithTrait invokes the traiter based on given name
 func (b *builderList[T]) WithTrait(name string) *builderList[T] {
-	if len(b.errors) > 0 {
+	if b.err != nil {
 		return b
 	}
 
 	tr, ok := b.f.traits[name]
 	if !ok {
-		b.errors = append(b.errors, fmt.Errorf("WithTrait: %s is not defiend at SetTrait", name))
+		b.err = fmt.Errorf("%w: %s", types.ErrWithTraitNameNotFound, name)
 		return b
 	}
 
@@ -391,19 +387,19 @@ func (b *builderList[T]) WithTrait(name string) *builderList[T] {
 
 // SetZero sets the fields to zero value
 func (b *builder[T]) SetZero(fields ...string) *builder[T] {
-	if len(b.errors) > 0 {
+	if b.err != nil {
 		return b
 	}
 
 	for _, field := range fields {
 		curField := reflect.ValueOf(b.v).Elem().FieldByName(field)
 		if !curField.IsValid() {
-			b.errors = append(b.errors, fmt.Errorf("SetZero: field %s is not found", field))
+			b.err = fmt.Errorf("%w: %s", types.ErrFieldNotFound, field)
 			return b
 		}
 
 		if !curField.CanSet() {
-			b.errors = append(b.errors, fmt.Errorf("SetZero: field %s can not be set", field))
+			b.err = fmt.Errorf("%w: %s", types.ErrFieldCantSet, field)
 			return b
 		}
 
@@ -416,24 +412,24 @@ func (b *builder[T]) SetZero(fields ...string) *builder[T] {
 // SetZero sets the fields to zero value for the given index.
 // The paramter i is the index of the list you want to set the zero value
 func (b *builderList[T]) SetZero(i int, fields ...string) *builderList[T] {
-	if len(b.errors) > 0 {
+	if b.err != nil {
 		return b
 	}
 
 	if i >= len(b.list) || i < 0 {
-		b.errors = append(b.errors, fmt.Errorf("SetZero: index %d is out of range", i))
+		b.err = types.ErrIndexIsOutOfRange
 		return b
 	}
 
 	for _, field := range fields {
 		curField := reflect.ValueOf(b.list[i]).Elem().FieldByName(field)
 		if !curField.IsValid() {
-			b.errors = append(b.errors, fmt.Errorf("SetZero: field %s is not found", field))
+			b.err = fmt.Errorf("%w: %s", types.ErrFieldNotFound, field)
 			return b
 		}
 
 		if !curField.CanSet() {
-			b.errors = append(b.errors, fmt.Errorf("SetZero: field %s can not be set", field))
+			b.err = fmt.Errorf("%w: %s", types.ErrFieldCantSet, field)
 			return b
 		}
 
@@ -445,7 +441,7 @@ func (b *builderList[T]) SetZero(i int, fields ...string) *builderList[T] {
 
 // WihtOne set one association to the factory value
 func (b *builder[T]) WithOne(v interface{}, ignoreFields ...string) *builder[T] {
-	if len(b.errors) > 0 {
+	if b.err != nil {
 		return b
 	}
 
@@ -453,14 +449,14 @@ func (b *builder[T]) WithOne(v interface{}, ignoreFields ...string) *builder[T] 
 	if len(b.f.tagToInfo) == 0 {
 		t, err := genTagToInfo(b.f.dataType)
 		if err != nil {
-			b.errors = append(b.errors, err)
+			b.err = err
 			return b
 		}
 		b.f.tagToInfo = t
 	}
 
 	if err := b.f.setAssValue(v); err != nil {
-		b.errors = append(b.errors, err)
+		b.err = err
 		return b
 	}
 
@@ -472,7 +468,7 @@ func (b *builder[T]) WithOne(v interface{}, ignoreFields ...string) *builder[T] 
 
 // WihtOne set one association to the factory value
 func (b *builderList[T]) WithOne(v interface{}, ignoreFields ...string) *builderList[T] {
-	if len(b.errors) > 0 {
+	if b.err != nil {
 		return b
 	}
 
@@ -480,14 +476,14 @@ func (b *builderList[T]) WithOne(v interface{}, ignoreFields ...string) *builder
 	if len(b.f.tagToInfo) == 0 {
 		t, err := genTagToInfo(b.f.dataType)
 		if err != nil {
-			b.errors = append(b.errors, err)
+			b.err = err
 			return b
 		}
 		b.f.tagToInfo = t
 	}
 
 	if err := b.f.setAssValue(v); err != nil {
-		b.errors = append(b.errors, err)
+		b.err = err
 		return b
 	}
 
@@ -499,7 +495,7 @@ func (b *builderList[T]) WithOne(v interface{}, ignoreFields ...string) *builder
 
 // WithMany set many associations to the factory value
 func (b *builderList[T]) WithMany(values []interface{}, ignoreFields ...string) *builderList[T] {
-	if len(b.errors) > 0 {
+	if b.err != nil {
 		return b
 	}
 
@@ -507,7 +503,7 @@ func (b *builderList[T]) WithMany(values []interface{}, ignoreFields ...string) 
 	if len(b.f.tagToInfo) == 0 {
 		t, err := genTagToInfo(b.f.dataType)
 		if err != nil {
-			b.errors = append(b.errors, err)
+			b.err = err
 			return b
 		}
 		b.f.tagToInfo = t
@@ -516,7 +512,7 @@ func (b *builderList[T]) WithMany(values []interface{}, ignoreFields ...string) 
 	var curValName string
 	for _, v := range values {
 		if err := b.f.setAssValue(v); err != nil {
-			b.errors = append(b.errors, err)
+			b.err = err
 			return b
 		}
 
@@ -524,7 +520,7 @@ func (b *builderList[T]) WithMany(values []interface{}, ignoreFields ...string) 
 		// because we have to make sure all the value is pointer (setAssValue does that for us)
 		// before we can use Elem()
 		if curValName != "" && curValName != reflect.TypeOf(v).Elem().Name() {
-			b.errors = append(b.errors, fmt.Errorf("WithMany: provided values are not the same type"))
+			b.err = types.ErrValueNotTheSameType
 			return b
 		}
 

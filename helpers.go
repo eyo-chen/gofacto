@@ -2,7 +2,6 @@ package gofacto
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"reflect"
 	"slices"
@@ -10,15 +9,12 @@ import (
 	"time"
 
 	"github.com/eyo-chen/gofacto/db"
+	"github.com/eyo-chen/gofacto/internal/types"
 	"github.com/eyo-chen/gofacto/internal/utils"
 )
 
 const (
 	packageName = "gofacto"
-)
-
-var (
-	errTagFormat = errors.New("tag is in wrong format. It should be gofacto:\"struct:<structName>,table:<TableName>,foreignField:<ForeignField>\"")
 )
 
 // setNonZeroValues sets non-zero values to the given struct.
@@ -148,18 +144,18 @@ func (f *Factory[T]) setAssValue(v interface{}) error {
 	// check if it's a pointer
 	if typeOfV.Kind() != reflect.Ptr {
 		name := typeOfV.Name()
-		return fmt.Errorf("type %s, value %v is not a pointer", name, v)
+		return fmt.Errorf("%s, %v: %e", name, v, types.ErrIsNotPtr)
 	}
 
 	name := typeOfV.Elem().Name()
 	// check if it's a pointer to a struct
 	if typeOfV.Elem().Kind() != reflect.Struct {
-		return fmt.Errorf("type %s, value %v is not a pointer to a struct", name, v)
+		return fmt.Errorf("%s, %v: %e", name, v, types.ErrIsNotStructPtr)
 	}
 
 	// check if it's existed in tagToInfo
 	if _, ok := f.tagToInfo[name]; !ok {
-		return fmt.Errorf("type %s, value %v is not found at tag", name, v)
+		return fmt.Errorf("type %s, value %v: %e", name, v, types.ErrNotFoundAtTag)
 	}
 
 	f.setNonZeroValues(v)
@@ -168,10 +164,6 @@ func (f *Factory[T]) setAssValue(v interface{}) error {
 
 // genAndInsertAss inserts the associations value into the database
 func (f *Factory[T]) insertAss(ctx context.Context) error {
-	if len(f.tagToInfo) == 0 {
-		return errors.New("tagToInfo is not set")
-	}
-
 	for name, vals := range f.associations {
 		tableName := f.tagToInfo[name].tableName
 		if _, err := f.db.InsertList(ctx, db.InserListParams{StorageName: tableName, Values: vals}); err != nil {
@@ -188,15 +180,15 @@ func copyValues[T any](dest *T, src T) error {
 	srcValue := reflect.ValueOf(src)
 
 	if destValue.Kind() != reflect.Struct {
-		return errors.New("destination value is not a struct")
+		return types.ErrDestIsNotStruct
 	}
 
 	if srcValue.Kind() != reflect.Struct {
-		return errors.New("source value is not a struct")
+		return types.ErrSrcIsNotStruct
 	}
 
 	if destValue.Type() != srcValue.Type() {
-		return errors.New("destination and source type is different")
+		return fmt.Errorf("%w: %s and %s", types.ErrTypeDiff, destValue.Type(), srcValue.Type())
 	}
 
 	for i := 0; i < destValue.NumField(); i++ {
@@ -209,20 +201,6 @@ func copyValues[T any](dest *T, src T) error {
 	}
 
 	return nil
-}
-
-// genFinalError generates a final error message from the given errors
-func genFinalError(errs []error) error {
-	if len(errs) == 0 {
-		return nil
-	}
-
-	errorMessages := make([]string, len(errs))
-	for i, err := range errs {
-		errorMessages[i] = err.Error()
-	}
-
-	return fmt.Errorf(strings.Join(errorMessages, "\n"))
 }
 
 // genNonZeroValue generates a non-zero value for the given type
@@ -271,21 +249,21 @@ func genNonZeroValue(t reflect.Type, i int) interface{} {
 func setForeignKey(target interface{}, name string, source interface{}) error {
 	targetField := reflect.ValueOf(target).Elem().FieldByName(name)
 	if !targetField.IsValid() {
-		return fmt.Errorf("field %s is not found", name)
+		return fmt.Errorf("%s: %w", name, types.ErrFieldNotFound)
 	}
 
 	if !targetField.CanSet() {
-		return fmt.Errorf("field %s can not be set", name)
+		return fmt.Errorf("%s: %w", name, types.ErrFieldCantSet)
 	}
 
 	sourceIDField := reflect.ValueOf(source).Elem().FieldByName("ID")
 	if !sourceIDField.IsValid() {
-		return fmt.Errorf("source field ID is not found")
+		return fmt.Errorf("%s: %w", "ID", types.ErrFieldNotFound)
 	}
 
 	sourceIDKind := sourceIDField.Kind()
 	if !isIntType(sourceIDKind) && !isUintType(sourceIDKind) {
-		return fmt.Errorf(" source field ID is not an integer")
+		return types.ErrNotInt
 	}
 
 	setIntValue(targetField, sourceIDField)
@@ -304,14 +282,14 @@ func genTagToInfo(dataType reflect.Type) (map[string]tagInfo, error) {
 
 		parts := strings.Split(tag, ",")
 		if len(parts) == 0 {
-			return nil, errTagFormat
+			return nil, types.ErrTagFormat
 		}
 
 		var structName, tableName, foreignField string
 		for _, p := range parts {
 			pairs := strings.Split(p, ":")
 			if len(pairs) != 2 {
-				return nil, errTagFormat
+				return nil, types.ErrTagFormat
 			}
 
 			key, value := pairs[0], pairs[1]
@@ -323,7 +301,7 @@ func genTagToInfo(dataType reflect.Type) (map[string]tagInfo, error) {
 			case "foreignField":
 				foreignField = value
 			default:
-				return nil, errTagFormat
+				return nil, types.ErrTagFormat
 			}
 		}
 
@@ -378,11 +356,11 @@ func setField(target interface{}, fieldName string, source interface{}) error {
 	fieldVal := structValue.FieldByName(fieldName)
 
 	if !fieldVal.IsValid() {
-		return fmt.Errorf("no such field: %s in target", fieldName)
+		return fmt.Errorf("%s: %w", fieldName, types.ErrFieldNotFound)
 	}
 
 	if !fieldVal.CanSet() {
-		return fmt.Errorf("cannot set field %s", fieldName)
+		return fmt.Errorf("%s: %w", fieldName, types.ErrFieldCantSet)
 	}
 
 	val := reflect.ValueOf(source)
@@ -393,7 +371,7 @@ func setField(target interface{}, fieldName string, source interface{}) error {
 	}
 
 	if fieldVal.Type() != val.Type() {
-		return fmt.Errorf("provided value type didn't match obj field type")
+		return types.ErrTypeDiff
 	}
 
 	fieldVal.Set(val)

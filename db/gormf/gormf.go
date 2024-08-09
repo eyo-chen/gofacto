@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/eyo-chen/gofacto/db"
+	"github.com/eyo-chen/gofacto/internal/types"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
@@ -57,11 +58,11 @@ func (c *config) GenCustomType(t reflect.Type) (interface{}, bool) {
 
 	// Handle specific types
 	switch t.String() {
-	case jsonType:
+	case types.JsonType:
 		return datatypes.JSON([]byte(`{"test": "test"}`)), true
-	case dateType:
+	case types.DateType:
 		return datatypes.Date(time.Now()), true
-	case timeType:
+	case types.TimeType:
 		return datatypes.NewTime(1, 2, 3, 0), true
 	default:
 		return nil, false
