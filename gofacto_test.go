@@ -1125,9 +1125,9 @@ func overwrites_OnBuilderList(t *testing.T) {
 func TestWithTrait(t *testing.T) {
 	for _, fn := range map[string]func(*testing.T){
 		"when withTrait on builder, overwrite one value":           withTrait_OnBuilder,
-		"when withTraits on builder list, overwrite target values": withTrait_OnBuilderList,
-		"when withTrait on builder list, overwrite one value":      withTrait_OnBuilderListOneValue,
+		"when withTrait on builder list, overwrite one value":      withTrait_OnBuilderList,
 		"when multiple withTrait on builder, overwrite one value":  withTrait_OnBuilderMultiple,
+		"when withTraits on builder list, overwrite target values": withTraits_OnBuilderList,
 	} {
 		t.Run(testutils.GetFunName(fn), func(t *testing.T) {
 			fn(t)
@@ -1201,122 +1201,6 @@ func withTrait_OnBuilder(t *testing.T) {
 }
 
 func withTrait_OnBuilderList(t *testing.T) {
-	bluePrint := func(i int, val testStruct) testStruct {
-		str := fmt.Sprintf("test%d", i)
-		return testStruct{
-			PtrStr: &str,
-			Time:   now,
-			Slice:  []int{i, i + 1, i + 2},
-		}
-	}
-	setTraiter := func(val *testStruct) {
-		val.Slice = []int{1, 1, 1}
-	}
-
-	f := New(testStruct{}).SetConfig(Config[testStruct]{BluePrint: bluePrint}).SetTrait("trait", setTraiter)
-
-	tests := []struct {
-		desc    string
-		taits   []string
-		want    func() []testStruct
-		wantErr error
-	}{
-		{
-			desc:  "set trait with same length",
-			taits: []string{"trait", "trait"},
-			want: func() []testStruct {
-				str1, str2 := "test1", "test2"
-				return []testStruct{
-					{
-						PtrStr: &str1,
-						Time:   now,
-						Slice:  []int{1, 1, 1},
-					},
-					{
-						PtrStr: &str2,
-						Time:   now,
-						Slice:  []int{1, 1, 1},
-					},
-				}
-			},
-			wantErr: nil,
-		},
-		{
-			desc:  "set trait with longer length",
-			taits: []string{"trait", "trait", "trait", "trait"},
-			want: func() []testStruct {
-				str3, str4 := "test3", "test4"
-				return []testStruct{
-					{
-						PtrStr: &str3,
-						Time:   now,
-						Slice:  []int{1, 1, 1},
-					},
-					{
-						PtrStr: &str4,
-						Time:   now,
-						Slice:  []int{1, 1, 1},
-					},
-				}
-			},
-			wantErr: nil,
-		},
-		{
-			desc:  "set trait with shorter length",
-			taits: []string{"trait"},
-			want: func() []testStruct {
-				str5, str6 := "test5", "test6"
-				return []testStruct{
-					{
-						PtrStr: &str5,
-						Time:   now,
-						Slice:  []int{1, 1, 1},
-					},
-					{
-						PtrStr: &str6,
-						Time:   now,
-						Slice:  []int{6, 7, 8},
-					},
-				}
-			},
-			wantErr: nil,
-		},
-		{
-			desc:    "set trait with incorrect value",
-			taits:   []string{"incorrect trait"},
-			want:    func() []testStruct { return []testStruct{} },
-			wantErr: types.ErrWithTraitNameNotFound,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.desc, func(t *testing.T) {
-			got, err := f.BuildList(mockCTX, 2).WithTraits(tt.taits...).Get()
-
-			if tt.wantErr != nil {
-				if !errors.Is(err, tt.wantErr) {
-					t.Fatalf("error should be %v", tt.wantErr)
-				}
-
-				if err := testutils.CompareVal(got, tt.want()); err != nil {
-					t.Fatalf(err.Error())
-				}
-
-				return
-			}
-
-			if err != nil {
-				t.Fatalf("unexpected error %v", err)
-			}
-
-			if err := testutils.CompareVal(got, tt.want(), testutils.FilterFields(testStruct{}, "PtrStr", "Time", "Slice")...); err != nil {
-				t.Fatalf(err.Error())
-			}
-		})
-	}
-}
-
-func withTrait_OnBuilderListOneValue(t *testing.T) {
 	bluePrint := func(i int, val testStruct) testStruct {
 		str := fmt.Sprintf("test%d", i)
 		return testStruct{
@@ -1448,6 +1332,122 @@ func withTrait_OnBuilderMultiple(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
 			got, err := f.Build(mockCTX).WithTrait(tt.taits[0]).WithTrait(tt.taits[1]).Get()
+
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("error should be %v", tt.wantErr)
+				}
+
+				if err := testutils.CompareVal(got, tt.want()); err != nil {
+					t.Fatalf(err.Error())
+				}
+
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error %v", err)
+			}
+
+			if err := testutils.CompareVal(got, tt.want(), testutils.FilterFields(testStruct{}, "PtrStr", "Time", "Slice")...); err != nil {
+				t.Fatalf(err.Error())
+			}
+		})
+	}
+}
+
+func withTraits_OnBuilderList(t *testing.T) {
+	bluePrint := func(i int, val testStruct) testStruct {
+		str := fmt.Sprintf("test%d", i)
+		return testStruct{
+			PtrStr: &str,
+			Time:   now,
+			Slice:  []int{i, i + 1, i + 2},
+		}
+	}
+	setTraiter := func(val *testStruct) {
+		val.Slice = []int{1, 1, 1}
+	}
+
+	f := New(testStruct{}).SetConfig(Config[testStruct]{BluePrint: bluePrint}).SetTrait("trait", setTraiter)
+
+	tests := []struct {
+		desc    string
+		taits   []string
+		want    func() []testStruct
+		wantErr error
+	}{
+		{
+			desc:  "set trait with same length",
+			taits: []string{"trait", "trait"},
+			want: func() []testStruct {
+				str1, str2 := "test1", "test2"
+				return []testStruct{
+					{
+						PtrStr: &str1,
+						Time:   now,
+						Slice:  []int{1, 1, 1},
+					},
+					{
+						PtrStr: &str2,
+						Time:   now,
+						Slice:  []int{1, 1, 1},
+					},
+				}
+			},
+			wantErr: nil,
+		},
+		{
+			desc:  "set trait with longer length",
+			taits: []string{"trait", "trait", "trait", "trait"},
+			want: func() []testStruct {
+				str3, str4 := "test3", "test4"
+				return []testStruct{
+					{
+						PtrStr: &str3,
+						Time:   now,
+						Slice:  []int{1, 1, 1},
+					},
+					{
+						PtrStr: &str4,
+						Time:   now,
+						Slice:  []int{1, 1, 1},
+					},
+				}
+			},
+			wantErr: nil,
+		},
+		{
+			desc:  "set trait with shorter length",
+			taits: []string{"trait"},
+			want: func() []testStruct {
+				str5, str6 := "test5", "test6"
+				return []testStruct{
+					{
+						PtrStr: &str5,
+						Time:   now,
+						Slice:  []int{1, 1, 1},
+					},
+					{
+						PtrStr: &str6,
+						Time:   now,
+						Slice:  []int{6, 7, 8},
+					},
+				}
+			},
+			wantErr: nil,
+		},
+		{
+			desc:    "set trait with incorrect value",
+			taits:   []string{"incorrect trait"},
+			want:    func() []testStruct { return []testStruct{} },
+			wantErr: types.ErrWithTraitNameNotFound,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			got, err := f.BuildList(mockCTX, 2).WithTraits(tt.taits...).Get()
 
 			if tt.wantErr != nil {
 				if !errors.Is(err, tt.wantErr) {
