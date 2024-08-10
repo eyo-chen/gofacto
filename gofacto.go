@@ -104,7 +104,7 @@ func (f *Factory[T]) WithIsSetZeroValue(isSetZeroValue bool) *Factory[T] {
 }
 
 // SetTrait adds a trait to the factory
-func (f *Factory[T]) SetTrait(name string, tr setTraiter[T]) *Factory[T] {
+func (f *Factory[T]) WithTrait(name string, tr setTraiter[T]) *Factory[T] {
 	f.traits[name] = tr
 	return f
 }

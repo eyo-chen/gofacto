@@ -1147,7 +1147,7 @@ func withTrait_OnBuilder(t *testing.T) {
 		val.Slice = []int{1, 1, 1}
 	}
 
-	f := New(testStruct{}).WithBlueprint(blueprint).SetTrait("trait", setTraiter)
+	f := New(testStruct{}).WithBlueprint(blueprint).WithTrait("trait", setTraiter)
 
 	tests := []struct {
 		desc    string
@@ -1212,7 +1212,7 @@ func withTrait_OnBuilderList(t *testing.T) {
 		val.Slice = []int{1, 1, 1}
 	}
 
-	f := New(testStruct{}).WithBlueprint(blueprint).SetTrait("trait", setTraiter)
+	f := New(testStruct{}).WithBlueprint(blueprint).WithTrait("trait", setTraiter)
 
 	tests := []struct {
 		desc    string
@@ -1291,7 +1291,7 @@ func withTrait_OnBuilderMultiple(t *testing.T) {
 		val.Slice = []int{2, 2, 2}
 	}
 
-	f := New(testStruct{}).WithBlueprint(blueprint).SetTrait("trait1", setTraiter1).SetTrait("trait2", setTraiter2)
+	f := New(testStruct{}).WithBlueprint(blueprint).WithTrait("trait1", setTraiter1).WithTrait("trait2", setTraiter2)
 
 	tests := []struct {
 		desc    string
@@ -1367,7 +1367,7 @@ func withTraits_OnBuilderList(t *testing.T) {
 	}
 
 	f := New(testStruct{}).WithBlueprint(blueprint).
-		SetTrait("trait", setTraiter)
+		WithTrait("trait", setTraiter)
 
 	tests := []struct {
 		desc    string
