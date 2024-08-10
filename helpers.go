@@ -211,20 +211,6 @@ func copyValues[T any](dest *T, src T) error {
 	return nil
 }
 
-// genFinalError generates a final error message from the given errors
-func genFinalError(errs []error) error {
-	if len(errs) == 0 {
-		return nil
-	}
-
-	errorMessages := make([]string, len(errs))
-	for i, err := range errs {
-		errorMessages[i] = err.Error()
-	}
-
-	return fmt.Errorf(strings.Join(errorMessages, "\n"))
-}
-
 // genNonZeroValue generates a non-zero value for the given type
 func genNonZeroValue(t reflect.Type, i int) interface{} {
 	switch t.Kind() {
