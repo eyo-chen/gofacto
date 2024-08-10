@@ -165,9 +165,13 @@ func (f *Factory[T]) Build(ctx context.Context) *builder[T] {
 
 // BuildList creates a list of n values
 func (f *Factory[T]) BuildList(ctx context.Context, n int) *builderList[T] {
-	var err error
 	if n < 1 {
-		err = types.ErrBuildListNGreaterThanZero
+		return &builderList[T]{
+			ctx:  ctx,
+			list: nil,
+			err:  types.ErrBuildListNGreaterThanZero,
+			f:    f,
+		}
 	}
 
 	list := make([]*T, n)
@@ -188,7 +192,7 @@ func (f *Factory[T]) BuildList(ctx context.Context, n int) *builderList[T] {
 	return &builderList[T]{
 		ctx:  ctx,
 		list: list,
-		err:  err,
+		err:  nil,
 		f:    f,
 	}
 }
