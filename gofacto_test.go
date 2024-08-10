@@ -9,7 +9,6 @@ import (
 
 	"github.com/eyo-chen/gofacto/internal/testutils"
 	"github.com/eyo-chen/gofacto/internal/types"
-	"github.com/eyo-chen/gofacto/utils"
 )
 
 var (
@@ -84,7 +83,7 @@ func build_BluePrintAllFields(t *testing.T) {
 			privateField:   str,
 		}
 	}
-	f := New(testStruct{}).SetConfig(Config[testStruct]{Blueprint: blueprint})
+	f := New(testStruct{}).WithBlueprint(blueprint)
 
 	tests := []struct {
 		desc string
@@ -174,7 +173,7 @@ func build_BluePrintSomeFields(t *testing.T) {
 			PtrBool: &b,
 		}
 	}
-	f := New(testStruct{}).SetConfig(Config[testStruct]{Blueprint: blueprint})
+	f := New(testStruct{}).WithBlueprint(blueprint)
 
 	tests := []struct {
 		desc string
@@ -238,7 +237,7 @@ func build_BluePrintNotSetZeroValues(t *testing.T) {
 			PtrStr: &str,
 		}
 	}
-	f := New(testStruct{}).SetConfig(Config[testStruct]{Blueprint: blueprint, IsSetZeroValue: utils.Bool(false)})
+	f := New(testStruct{}).WithBlueprint(blueprint).WithIsSetZeroValue(false)
 
 	tests := []struct {
 		desc string
@@ -318,7 +317,7 @@ func build_NoBluePrint(t *testing.T) {
 }
 
 func build_NoBluePrintNotSetZeroValues(t *testing.T) {
-	f := New(testStruct{}).SetConfig(Config[testStruct]{IsSetZeroValue: utils.Bool(false)})
+	f := New(testStruct{}).WithIsSetZeroValue(false)
 
 	tests := []struct {
 		desc string
@@ -447,7 +446,7 @@ func buildList_BluePrintAllFields(t *testing.T) {
 			SlicePtrStruct: []*subStruct{{ID: i, Name: str}, {ID: i + 1, Name: str}},
 		}
 	}
-	f := New(testStruct{}).SetConfig(Config[testStruct]{Blueprint: blueprint})
+	f := New(testStruct{}).WithBlueprint(blueprint)
 
 	tests := []struct {
 		desc string
@@ -578,7 +577,7 @@ func buildList_BluePrintSomeFields(t *testing.T) {
 			SlicePtrStruct: []*subStruct{{ID: i, Name: str}, {ID: i + 1, Name: str}},
 		}
 	}
-	f := New(testStruct{}).SetConfig(Config[testStruct]{Blueprint: blueprint})
+	f := New(testStruct{}).WithBlueprint(blueprint)
 
 	tests := []struct {
 		desc string
@@ -653,7 +652,7 @@ func buildList_BluePrintNotSetZeroValues(t *testing.T) {
 			SlicePtrStruct: []*subStruct{{ID: i, Name: str}, {ID: i + 1, Name: str}},
 		}
 	}
-	f := New(testStruct{}).SetConfig(Config[testStruct]{Blueprint: blueprint, IsSetZeroValue: utils.Bool(false)})
+	f := New(testStruct{}).WithBlueprint(blueprint).WithIsSetZeroValue(false)
 
 	tests := []struct {
 		desc string
@@ -744,7 +743,7 @@ func buildList_NoBluePrintNotSetZeroValues(t *testing.T) {
 }
 
 func buildList_NoBluePrint(t *testing.T) {
-	f := New(testStruct{}).SetConfig(Config[testStruct]{IsSetZeroValue: utils.Bool(false)})
+	f := New(testStruct{}).WithIsSetZeroValue(false)
 
 	tests := []struct {
 		desc string
@@ -911,7 +910,7 @@ func overwrite_OnBuilder(t *testing.T) {
 			SlicePtrStruct: []*subStruct{{ID: i, Name: str}, {ID: i + 1, Name: str}},
 		}
 	}
-	f := New(testStruct{}).SetConfig(Config[testStruct]{Blueprint: blueprint})
+	f := New(testStruct{}).WithBlueprint(blueprint)
 
 	tests := []struct {
 		desc string
@@ -961,7 +960,7 @@ func overwrite_OnBuilderList(t *testing.T) {
 			SlicePtrStruct: []*subStruct{{ID: i, Name: str}, {ID: i + 1, Name: str}},
 		}
 	}
-	f := New(testStruct{}).SetConfig(Config[testStruct]{Blueprint: blueprint})
+	f := New(testStruct{}).WithBlueprint(blueprint)
 
 	tests := []struct {
 		desc string
@@ -1025,7 +1024,7 @@ func overwrites_OnBuilderList(t *testing.T) {
 			SlicePtrStruct: []*subStruct{{ID: i, Name: str}, {ID: i + 1, Name: str}},
 		}
 	}
-	f := New(testStruct{}).SetConfig(Config[testStruct]{Blueprint: blueprint})
+	f := New(testStruct{}).WithBlueprint(blueprint)
 
 	tests := []struct {
 		desc string
@@ -1148,7 +1147,7 @@ func withTrait_OnBuilder(t *testing.T) {
 		val.Slice = []int{1, 1, 1}
 	}
 
-	f := New(testStruct{}).SetConfig(Config[testStruct]{Blueprint: blueprint}).SetTrait("trait", setTraiter)
+	f := New(testStruct{}).WithBlueprint(blueprint).SetTrait("trait", setTraiter)
 
 	tests := []struct {
 		desc    string
@@ -1213,7 +1212,7 @@ func withTrait_OnBuilderList(t *testing.T) {
 		val.Slice = []int{1, 1, 1}
 	}
 
-	f := New(testStruct{}).SetConfig(Config[testStruct]{Blueprint: blueprint}).SetTrait("trait", setTraiter)
+	f := New(testStruct{}).WithBlueprint(blueprint).SetTrait("trait", setTraiter)
 
 	tests := []struct {
 		desc    string
@@ -1292,9 +1291,7 @@ func withTrait_OnBuilderMultiple(t *testing.T) {
 		val.Slice = []int{2, 2, 2}
 	}
 
-	f := New(testStruct{}).SetConfig(Config[testStruct]{Blueprint: blueprint}).
-		SetTrait("trait1", setTraiter1).
-		SetTrait("trait2", setTraiter2)
+	f := New(testStruct{}).WithBlueprint(blueprint).SetTrait("trait1", setTraiter1).SetTrait("trait2", setTraiter2)
 
 	tests := []struct {
 		desc    string
@@ -1369,7 +1366,8 @@ func withTraits_OnBuilderList(t *testing.T) {
 		val.Slice = []int{1, 1, 1}
 	}
 
-	f := New(testStruct{}).SetConfig(Config[testStruct]{Blueprint: blueprint}).SetTrait("trait", setTraiter)
+	f := New(testStruct{}).WithBlueprint(blueprint).
+		SetTrait("trait", setTraiter)
 
 	tests := []struct {
 		desc    string
@@ -1507,7 +1505,7 @@ func setZero_OnBuilderWithBluePrint(t *testing.T) {
 			SlicePtrStruct: []*subStruct{{ID: i, Name: str}, {ID: i + 1, Name: str}},
 		}
 	}
-	f := New(testStruct{}).SetConfig(Config[testStruct]{Blueprint: blueprint})
+	f := New(testStruct{}).WithBlueprint(blueprint)
 
 	tests := []struct {
 		desc              string
@@ -1682,7 +1680,7 @@ func setZero_OnBuilderListWithBluePrint(t *testing.T) {
 			SlicePtrStruct: []*subStruct{{ID: i, Name: str}, {ID: i + 1, Name: str}},
 		}
 	}
-	f := New(testStruct{}).SetConfig(Config[testStruct]{Blueprint: blueprint})
+	f := New(testStruct{}).WithBlueprint(blueprint)
 
 	tests := []struct {
 		desc              string
