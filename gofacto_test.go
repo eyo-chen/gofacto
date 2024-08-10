@@ -346,7 +346,27 @@ func build_NoBluePrintNotSetZeroValues(t *testing.T) {
 
 // TODO: make error message more readable
 func build_IgnoreFields(t *testing.T) {
-	f := New(testStruct{}).SetConfig(Config[testStruct]{IgnoreFields: []string{"Int", "PtrInt", "Str", "PtrStr", "Incorrect field"}})
+	type testStruct1 struct {
+		Int            int     `gofacto:"omit"`
+		PtrInt         *int    `gofacto:"omit"`
+		Str            string  `gofacto:"omit"`
+		PtrStr         *string `gofacto:"omit"`
+		Bool           bool
+		PtrBool        *bool
+		Time           time.Time
+		PtrTime        *time.Time
+		Float          float64
+		PtrFloat       *float64
+		Interface      interface{}
+		Struct         subStruct
+		PtrStruct      *subStruct
+		Slice          []int
+		PtrSlice       []*int
+		SliceStruct    []subStruct
+		SlicePtrStruct []*subStruct
+	}
+
+	f := New(testStruct1{})
 
 	tests := []struct {
 		desc              string
@@ -356,12 +376,12 @@ func build_IgnoreFields(t *testing.T) {
 		{
 			desc:              "first build",
 			wantZeroFields:    []string{"Int", "PtrInt", "Str", "PtrStr", "Interface"},
-			wantNonZeroFields: testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Str", "PtrStr", "Interface"),
+			wantNonZeroFields: testutils.FilterFields(testStruct1{}, "Int", "PtrInt", "Str", "PtrStr", "Interface"),
 		},
 		{
 			desc:              "second build",
 			wantZeroFields:    []string{"Int", "PtrInt", "Str", "PtrStr", "Interface"},
-			wantNonZeroFields: testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Str", "PtrStr", "Interface"),
+			wantNonZeroFields: testutils.FilterFields(testStruct1{}, "Int", "PtrInt", "Str", "PtrStr", "Interface"),
 		},
 	}
 
