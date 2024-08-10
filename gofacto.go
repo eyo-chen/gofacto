@@ -88,22 +88,27 @@ func (f *Factory[T]) WithBlueprint(bp blueprintFunc[T]) *Factory[T] {
 	return f
 }
 
+// WithStorageName sets the storage name
+//
+// table name for SQL, collection name for NoSQL
 func (f *Factory[T]) WithStorageName(name string) *Factory[T] {
 	f.storageName = name
 	return f
 }
 
+// WithDB sets the database connection
 func (f *Factory[T]) WithDB(db db.Database) *Factory[T] {
 	f.db = db
 	return f
 }
 
+// WithIsSetZeroValue sets whether to set zero value for the fields
 func (f *Factory[T]) WithIsSetZeroValue(isSetZeroValue bool) *Factory[T] {
 	f.isSetZeroValue = isSetZeroValue
 	return f
 }
 
-// SetTrait adds a trait to the factory
+// WithTrait sets the trait function
 func (f *Factory[T]) WithTrait(name string, tr setTraiter[T]) *Factory[T] {
 	f.traits[name] = tr
 	return f
