@@ -12,12 +12,12 @@ import (
 
 // Config is the configuration for the factory
 type Config[T any] struct {
-	// BluePrint is a client-defined function to create a new value.
+	// Blueprint is a client-defined function to create a new value.
 	// If not provided, non-zero default values is set.
 	//
-	// BluePrint must follow the signature:
-	// type bluePrintFunc[T any] func(i int, last T) T
-	BluePrint bluePrintFunc[T]
+	// Blueprint must follow the signature:
+	// type blueprintFunc[T any] func(i int, last T) T
+	Blueprint blueprintFunc[T]
 
 	// DB is the interface for the Database.
 	// It must be provided if want to do database operations.
@@ -44,7 +44,7 @@ type Config[T any] struct {
 // Factory is the gofacto factory to create mock data
 type Factory[T any] struct {
 	db             db.Database
-	bluePrint      bluePrintFunc[T]
+	blueprint      blueprintFunc[T]
 	storageName    string
 	dataType       reflect.Type
 	empty          T
@@ -65,8 +65,8 @@ type Factory[T any] struct {
 	tagToInfo map[string]tagInfo
 }
 
-// bluePrintFunc is a client-defined function to create a new value
-type bluePrintFunc[T any] func(i int, last T) T
+// blueprintFunc is a client-defined function to create a new value
+type blueprintFunc[T any] func(i int) T
 
 // setTraiter is a client-defined function to add a trait to mutate the value
 type setTraiter[T any] func(v *T)
@@ -115,7 +115,7 @@ func New[T any](v T) *Factory[T] {
 
 // SetConfig sets the configuration for the factory
 func (f *Factory[T]) SetConfig(c Config[T]) *Factory[T] {
-	f.bluePrint = c.BluePrint
+	f.blueprint = c.Blueprint
 	f.db = c.DB
 
 	if c.StorageName == "" {
@@ -145,8 +145,8 @@ func (f *Factory[T]) Reset() {
 // Build builds a value
 func (f *Factory[T]) Build(ctx context.Context) *builder[T] {
 	var v T
-	if f.bluePrint != nil {
-		v = f.bluePrint(f.index, v)
+	if f.blueprint != nil {
+		v = f.blueprint(f.index)
 	}
 
 	if f.isSetZeroValue {
@@ -177,8 +177,8 @@ func (f *Factory[T]) BuildList(ctx context.Context, n int) *builderList[T] {
 	list := make([]*T, n)
 	for i := 0; i < n; i++ {
 		var v T
-		if f.bluePrint != nil {
-			v = f.bluePrint(f.index, v)
+		if f.blueprint != nil {
+			v = f.blueprint(f.index)
 		}
 
 		if f.isSetZeroValue {
