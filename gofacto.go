@@ -66,7 +66,7 @@ type Factory[T any] struct {
 }
 
 // bluePrintFunc is a client-defined function to create a new value
-type bluePrintFunc[T any] func(i int, last T) T
+type bluePrintFunc[T any] func(i int) T
 
 // setTraiter is a client-defined function to add a trait to mutate the value
 type setTraiter[T any] func(v *T)
@@ -146,7 +146,7 @@ func (f *Factory[T]) Reset() {
 func (f *Factory[T]) Build(ctx context.Context) *builder[T] {
 	var v T
 	if f.bluePrint != nil {
-		v = f.bluePrint(f.index, v)
+		v = f.bluePrint(f.index)
 	}
 
 	if f.isSetZeroValue {
@@ -178,7 +178,7 @@ func (f *Factory[T]) BuildList(ctx context.Context, n int) *builderList[T] {
 	for i := 0; i < n; i++ {
 		var v T
 		if f.bluePrint != nil {
-			v = f.bluePrint(f.index, v)
+			v = f.bluePrint(f.index)
 		}
 
 		if f.isSetZeroValue {

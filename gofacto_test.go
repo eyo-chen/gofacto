@@ -59,7 +59,7 @@ func TestBuild(t *testing.T) {
 }
 
 func build_BluePrintAllFields(t *testing.T) {
-	bluePrint := func(i int, val testStruct) testStruct {
+	bluePrint := func(i int) testStruct {
 		str := fmt.Sprintf("test%d", i)
 		b := true
 		f := 1.1
@@ -165,7 +165,7 @@ func build_BluePrintAllFields(t *testing.T) {
 }
 
 func build_BluePrintSomeFields(t *testing.T) {
-	bluePrint := func(i int, val testStruct) testStruct {
+	bluePrint := func(i int) testStruct {
 		b := true
 		return testStruct{
 			Int:     i * 2,
@@ -229,7 +229,7 @@ func build_BluePrintSomeFields(t *testing.T) {
 }
 
 func build_BluePrintNotSetZeroValues(t *testing.T) {
-	bluePrint := func(i int, val testStruct) testStruct {
+	bluePrint := func(i int) testStruct {
 		str := fmt.Sprintf("test%d", i)
 		return testStruct{
 			Int:    i * 2,
@@ -423,7 +423,7 @@ func TestBuildList(t *testing.T) {
 }
 
 func buildList_BluePrintAllFields(t *testing.T) {
-	bluePrint := func(i int, val testStruct) testStruct {
+	bluePrint := func(i int) testStruct {
 		str := fmt.Sprintf("test%d", i)
 		b := true
 		f := 1.1
@@ -570,7 +570,7 @@ func buildList_BluePrintAllFields(t *testing.T) {
 }
 
 func buildList_BluePrintSomeFields(t *testing.T) {
-	bluePrint := func(i int, val testStruct) testStruct {
+	bluePrint := func(i int) testStruct {
 		str := fmt.Sprintf("test%d", i)
 		return testStruct{
 			Int:            i * 2,
@@ -645,7 +645,7 @@ func buildList_BluePrintSomeFields(t *testing.T) {
 }
 
 func buildList_BluePrintNotSetZeroValues(t *testing.T) {
-	bluePrint := func(i int, val testStruct) testStruct {
+	bluePrint := func(i int) testStruct {
 		str := fmt.Sprintf("test%d", i)
 		return testStruct{
 			Int:            i * 2,
@@ -903,7 +903,7 @@ func TestOverwrite(t *testing.T) {
 }
 
 func overwrite_OnBuilder(t *testing.T) {
-	bluePrint := func(i int, val testStruct) testStruct {
+	bluePrint := func(i int) testStruct {
 		str := fmt.Sprintf("test%d", i)
 		return testStruct{
 			Int:            i * 2,
@@ -953,7 +953,7 @@ func overwrite_OnBuilder(t *testing.T) {
 }
 
 func overwrite_OnBuilderList(t *testing.T) {
-	bluePrint := func(i int, val testStruct) testStruct {
+	bluePrint := func(i int) testStruct {
 		str := fmt.Sprintf("test%d", i)
 		return testStruct{
 			Int:            i * 2,
@@ -1017,7 +1017,7 @@ func overwrite_OnBuilderList(t *testing.T) {
 }
 
 func overwrites_OnBuilderList(t *testing.T) {
-	bluePrint := func(i int, val testStruct) testStruct {
+	bluePrint := func(i int) testStruct {
 		str := fmt.Sprintf("test%d", i)
 		return testStruct{
 			Int:            i * 2,
@@ -1136,7 +1136,7 @@ func TestWithTrait(t *testing.T) {
 }
 
 func withTrait_OnBuilder(t *testing.T) {
-	bluePrint := func(i int, val testStruct) testStruct {
+	bluePrint := func(i int) testStruct {
 		str := fmt.Sprintf("test%d", i)
 		return testStruct{
 			PtrStr: &str,
@@ -1201,7 +1201,7 @@ func withTrait_OnBuilder(t *testing.T) {
 }
 
 func withTrait_OnBuilderList(t *testing.T) {
-	bluePrint := func(i int, val testStruct) testStruct {
+	bluePrint := func(i int) testStruct {
 		str := fmt.Sprintf("test%d", i)
 		return testStruct{
 			PtrStr: &str,
@@ -1277,7 +1277,7 @@ func withTrait_OnBuilderList(t *testing.T) {
 }
 
 func withTrait_OnBuilderMultiple(t *testing.T) {
-	bluePrint := func(i int, val testStruct) testStruct {
+	bluePrint := func(i int) testStruct {
 		str := fmt.Sprintf("test%d", i)
 		return testStruct{
 			PtrStr: &str,
@@ -1357,7 +1357,7 @@ func withTrait_OnBuilderMultiple(t *testing.T) {
 }
 
 func withTraits_OnBuilderList(t *testing.T) {
-	bluePrint := func(i int, val testStruct) testStruct {
+	bluePrint := func(i int) testStruct {
 		str := fmt.Sprintf("test%d", i)
 		return testStruct{
 			PtrStr: &str,
@@ -1488,7 +1488,7 @@ func TestSetZero(t *testing.T) {
 }
 
 func setZero_OnBuilderWithBluePrint(t *testing.T) {
-	bluePrint := func(i int, val testStruct) testStruct {
+	bluePrint := func(i int) testStruct {
 		str := fmt.Sprintf("test%d", i)
 		f := 1.1
 		return testStruct{
@@ -1663,7 +1663,7 @@ func setZero_OnBuilderWithoutBluePrint(t *testing.T) {
 }
 
 func setZero_OnBuilderListWithBluePrint(t *testing.T) {
-	bluePrint := func(i int, val testStruct) testStruct {
+	bluePrint := func(i int) testStruct {
 		str := fmt.Sprintf("test%d", i)
 		f := 1.1
 		return testStruct{
