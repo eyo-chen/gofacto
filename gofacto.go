@@ -83,6 +83,7 @@ func New[T any](v T) *Factory[T] {
 	}
 }
 
+// WithBlueprint sets the blueprint function
 func (f *Factory[T]) WithBlueprint(bp blueprintFunc[T]) *Factory[T] {
 	f.blueprint = bp
 	return f
