@@ -71,7 +71,7 @@ Note: All fields in the returned struct are populated with non-zero values, and 
 
 &nbsp;
 
-# Features
+# Usage
 ## Initialize
 Use `New` to initialize the factory by passing the struct you want to create mock data for
 ```go
@@ -361,7 +361,7 @@ type Order struct {
 }
 ```
 
-# Important Considerations
+# Known issues
 1. gofacto assumes the `ID` field is the primary key and auto-incremented by the database.
 
 2. The gofacto cannot set the custom type values defined by the clients.
