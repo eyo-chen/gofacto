@@ -2,11 +2,11 @@ package gofacto
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"reflect"
 
 	"github.com/eyo-chen/gofacto/db"
+	"github.com/eyo-chen/gofacto/internal/types"
 	"github.com/eyo-chen/gofacto/internal/utils"
 )
 
@@ -165,9 +165,13 @@ func (f *Factory[T]) Build(ctx context.Context) *builder[T] {
 
 // BuildList creates a list of n values
 func (f *Factory[T]) BuildList(ctx context.Context, n int) *builderList[T] {
-	var err error
 	if n < 1 {
-		err = errors.New("BuildList: n must be greater than 0")
+		return &builderList[T]{
+			ctx:  ctx,
+			list: nil,
+			err:  types.ErrBuildListNGreaterThanZero,
+			f:    f,
+		}
 	}
 
 	list := make([]*T, n)
@@ -188,7 +192,7 @@ func (f *Factory[T]) BuildList(ctx context.Context, n int) *builderList[T] {
 	return &builderList[T]{
 		ctx:  ctx,
 		list: list,
-		err:  err,
+		err:  nil,
 		f:    f,
 	}
 }
@@ -223,7 +227,7 @@ func (b *builder[T]) Insert() (T, error) {
 	}
 
 	if b.f.db == nil {
-		return b.f.empty, errors.New("DB connection is not provided")
+		return b.f.empty, types.ErrDBIsNotProvided
 	}
 
 	if len(b.f.associations) > 0 {
@@ -239,7 +243,7 @@ func (b *builder[T]) Insert() (T, error) {
 
 	v, ok := val.(*T)
 	if !ok {
-		return b.f.empty, errors.New("Insert: can't convert to pointer")
+		return b.f.empty, types.ErrCantCvtToPtr
 	}
 
 	return *v, nil
@@ -252,7 +256,7 @@ func (b *builderList[T]) Insert() ([]T, error) {
 	}
 
 	if b.f.db == nil {
-		return nil, errors.New("DB connection is not provided")
+		return nil, types.ErrDBIsNotProvided
 	}
 
 	if len(b.f.associations) > 0 {
@@ -276,7 +280,7 @@ func (b *builderList[T]) Insert() ([]T, error) {
 	for i, val := range vals {
 		v, ok := val.(*T)
 		if !ok {
-			return nil, errors.New("Insert: can't convert to pointer")
+			return nil, types.ErrCantCvtToPtr
 		}
 
 		output[i] = *v
@@ -339,7 +343,7 @@ func (b *builder[T]) WithTrait(name string) *builder[T] {
 
 	tr, ok := b.f.traits[name]
 	if !ok {
-		b.err = fmt.Errorf("WithTrait: %s is not defiend at SetTrait", name)
+		b.err = fmt.Errorf("%w: %s", types.ErrWithTraitNameNotFound, name)
 		return b
 	}
 
@@ -357,7 +361,7 @@ func (b *builderList[T]) WithTraits(names ...string) *builderList[T] {
 	for i := 0; i < len(names) && i < len(b.list); i++ {
 		tr, ok := b.f.traits[names[i]]
 		if !ok {
-			b.err = fmt.Errorf("WithTrait: %s is not defiend at SetTrait", names[i])
+			b.err = fmt.Errorf("%w: %s", types.ErrWithTraitNameNotFound, names[i])
 			return b
 		}
 
@@ -375,7 +379,7 @@ func (b *builderList[T]) WithTrait(name string) *builderList[T] {
 
 	tr, ok := b.f.traits[name]
 	if !ok {
-		b.err = fmt.Errorf("WithTrait: %s is not defiend at SetTrait", name)
+		b.err = fmt.Errorf("%w: %s", types.ErrWithTraitNameNotFound, name)
 		return b
 	}
 
@@ -395,12 +399,12 @@ func (b *builder[T]) SetZero(fields ...string) *builder[T] {
 	for _, field := range fields {
 		curField := reflect.ValueOf(b.v).Elem().FieldByName(field)
 		if !curField.IsValid() {
-			b.err = fmt.Errorf("SetZero: field %s is not found", field)
+			b.err = fmt.Errorf("%w: %s", types.ErrFieldNotFound, field)
 			return b
 		}
 
 		if !curField.CanSet() {
-			b.err = fmt.Errorf("SetZero: field %s can not be set", field)
+			b.err = fmt.Errorf("%w: %s", types.ErrFieldCantSet, field)
 			return b
 		}
 
@@ -418,19 +422,19 @@ func (b *builderList[T]) SetZero(i int, fields ...string) *builderList[T] {
 	}
 
 	if i >= len(b.list) || i < 0 {
-		b.err = fmt.Errorf("SetZero: index %d is out of range", i)
+		b.err = types.ErrIndexIsOutOfRange
 		return b
 	}
 
 	for _, field := range fields {
 		curField := reflect.ValueOf(b.list[i]).Elem().FieldByName(field)
 		if !curField.IsValid() {
-			b.err = fmt.Errorf("SetZero: field %s is not found", field)
+			b.err = fmt.Errorf("%w: %s", types.ErrFieldNotFound, field)
 			return b
 		}
 
 		if !curField.CanSet() {
-			b.err = fmt.Errorf("SetZero: field %s can not be set", field)
+			b.err = fmt.Errorf("%w: %s", types.ErrFieldCantSet, field)
 			return b
 		}
 
@@ -491,7 +495,7 @@ func (b *builderList[T]) WithMany(values []interface{}, ignoreFields ...string) 
 		// because we have to make sure all the value is pointer (setAssValue does that for us)
 		// before we can use Elem()
 		if curValName != "" && curValName != reflect.TypeOf(v).Elem().Name() {
-			b.err = fmt.Errorf("WithMany: provided values are not the same type")
+			b.err = types.ErrValueNotTheSameType
 			return b
 		}
 
