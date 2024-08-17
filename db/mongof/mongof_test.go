@@ -69,9 +69,7 @@ func (s *testingSuite) setupSuite() {
 	}
 	s.db = client.Database("mongo")
 
-	s.f = gofacto.New(Person{}).SetConfig(gofacto.Config[Person]{
-		DB: NewConfig(s.db),
-	})
+	s.f = gofacto.New(Person{}).WithDB(NewConfig(s.db))
 }
 
 func (s *testingSuite) tearDownSuite() error {

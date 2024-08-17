@@ -92,12 +92,8 @@ func (s *testingSuite) setupSuite() {
 	}
 
 	// set up gofacto factories
-	s.authorF = gofacto.New(Author{}).SetConfig(gofacto.Config[Author]{
-		DB: NewConfig(s.db),
-	})
-	s.bookF = gofacto.New(Book{}).SetConfig(gofacto.Config[Book]{
-		DB: NewConfig(s.db),
-	})
+	s.authorF = gofacto.New(Author{}).WithDB(NewConfig(s.db))
+	s.bookF = gofacto.New(Book{}).WithDB(NewConfig(s.db))
 }
 
 func (s *testingSuite) tearDownSuite() error {

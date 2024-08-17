@@ -10,37 +10,6 @@ import (
 	"github.com/eyo-chen/gofacto/internal/utils"
 )
 
-// Config is the configuration for the factory
-type Config[T any] struct {
-	// Blueprint is a client-defined function to create a new value.
-	// If not provided, non-zero default values is set.
-	//
-	// Blueprint must follow the signature:
-	// type blueprintFunc[T any] func(i int, last T) T
-	Blueprint blueprintFunc[T]
-
-	// DB is the interface for the Database.
-	// It must be provided if want to do database operations.
-	//
-	// use sqlf for raw sql
-	//
-	// use gormf for gorm
-	//
-	// use mongof for mongo
-	DB db.Database
-
-	// StorageName is the name specified where the value is stored.
-	// It will be table name for sql, and collection name for mongodb.
-	// It is optional.
-	// If not provided, camel case of the type name will be used.
-	StorageName string
-
-	// isSetZeroValue is to determine if the zero value should be set.
-	// It is optional.
-	// If not provided, it will be default to true.
-	IsSetZeroValue *bool
-}
-
 // Factory is the gofacto factory to create mock data
 type Factory[T any] struct {
 	db             db.Database
@@ -104,6 +73,7 @@ func New[T any](v T) *Factory[T] {
 		dataType:       dataType,
 		empty:          reflect.New(dataType).Elem().Interface().(T),
 		associations:   map[string][]interface{}{},
+		storageName:    fmt.Sprintf("%ss", utils.CamelToSnake(dataType.Name())),
 		tagToInfo:      ti,
 		ignoreFields:   ifd,
 		index:          1,
@@ -113,26 +83,34 @@ func New[T any](v T) *Factory[T] {
 	}
 }
 
-// SetConfig sets the configuration for the factory
-func (f *Factory[T]) SetConfig(c Config[T]) *Factory[T] {
-	f.blueprint = c.Blueprint
-	f.db = c.DB
-
-	if c.StorageName == "" {
-		f.storageName = fmt.Sprintf("%ss", utils.CamelToSnake(f.dataType.Name()))
-	} else {
-		f.storageName = c.StorageName
-	}
-
-	if c.IsSetZeroValue != nil {
-		f.isSetZeroValue = *c.IsSetZeroValue
-	}
-
+// WithBlueprint sets the blueprint function
+func (f *Factory[T]) WithBlueprint(bp blueprintFunc[T]) *Factory[T] {
+	f.blueprint = bp
 	return f
 }
 
-// SetTrait adds a trait to the factory
-func (f *Factory[T]) SetTrait(name string, tr setTraiter[T]) *Factory[T] {
+// WithStorageName sets the storage name
+//
+// table name for SQL, collection name for NoSQL
+func (f *Factory[T]) WithStorageName(name string) *Factory[T] {
+	f.storageName = name
+	return f
+}
+
+// WithDB sets the database connection
+func (f *Factory[T]) WithDB(db db.Database) *Factory[T] {
+	f.db = db
+	return f
+}
+
+// WithIsSetZeroValue sets whether to set zero value for the fields
+func (f *Factory[T]) WithIsSetZeroValue(isSetZeroValue bool) *Factory[T] {
+	f.isSetZeroValue = isSetZeroValue
+	return f
+}
+
+// WithTrait sets the trait function
+func (f *Factory[T]) WithTrait(name string, tr setTraiter[T]) *Factory[T] {
 	f.traits[name] = tr
 	return f
 }
