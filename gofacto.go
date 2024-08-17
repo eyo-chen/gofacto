@@ -312,8 +312,8 @@ func (b *builderList[T]) Overwrite(ow T) *builderList[T] {
 	return b
 }
 
-// WithTrait invokes the traiter based on given name
-func (b *builder[T]) WithTrait(name string) *builder[T] {
+// SetTrait invokes the trait function based on the given name
+func (b *builder[T]) SetTrait(name string) *builder[T] {
 	if b.err != nil {
 		return b
 	}
@@ -329,8 +329,8 @@ func (b *builder[T]) WithTrait(name string) *builder[T] {
 	return b
 }
 
-// WithTraits invokes the traiter based on given names
-func (b *builderList[T]) WithTraits(names ...string) *builderList[T] {
+// SetTraits invokes the trait functions based on the given names
+func (b *builderList[T]) SetTraits(names ...string) *builderList[T] {
 	if b.err != nil {
 		return b
 	}
@@ -348,8 +348,8 @@ func (b *builderList[T]) WithTraits(names ...string) *builderList[T] {
 	return b
 }
 
-// WithTrait invokes the traiter based on given name
-func (b *builderList[T]) WithTrait(name string) *builderList[T] {
+// SetTrait invokes the trait function based on the given name
+func (b *builderList[T]) SetTrait(name string) *builderList[T] {
 	if b.err != nil {
 		return b
 	}
