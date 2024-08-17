@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/eyo-chen/gofacto/internal/testutils"
-	"github.com/eyo-chen/gofacto/internal/types"
 )
 
 var (
@@ -834,7 +833,7 @@ func buildlist_PassNegativeNumber(t *testing.T) {
 	f := New(testStruct{})
 
 	want := []testStruct{}
-	wantErr := types.ErrBuildListNGreaterThanZero
+	wantErr := errBuildListNGreaterThanZero
 
 	got, err := f.BuildList(mockCTX, -1).Get()
 	if !errors.Is(err, wantErr) {
@@ -861,7 +860,7 @@ func insert_OnBuilder(t *testing.T) {
 	f := New(testStruct{})
 
 	want := testStruct{}
-	wantErr := types.ErrDBIsNotProvided
+	wantErr := errDBIsNotProvided
 
 	vals, err := f.Build(mockCTX).Insert()
 	if !errors.Is(err, wantErr) {
@@ -877,7 +876,7 @@ func insert_OnBuilderList(t *testing.T) {
 	f := New(testStruct{})
 
 	want := []testStruct{}
-	wantErr := types.ErrDBIsNotProvided
+	wantErr := errDBIsNotProvided
 
 	vals, err := f.BuildList(mockCTX, 2).Insert()
 	if !errors.Is(err, wantErr) {
@@ -1172,7 +1171,7 @@ func withTrait_OnBuilder(t *testing.T) {
 			desc:    "set trait with incorrect value",
 			trait:   "incorrect trait",
 			want:    func() testStruct { return testStruct{} },
-			wantErr: types.ErrWithTraitNameNotFound,
+			wantErr: errWithTraitNameNotFound,
 		},
 	}
 
@@ -1244,7 +1243,7 @@ func withTrait_OnBuilderList(t *testing.T) {
 			desc:    "set trait with incorrect value",
 			tait:    "incorrect trait",
 			want:    func() []testStruct { return []testStruct{} },
-			wantErr: types.ErrWithTraitNameNotFound,
+			wantErr: errWithTraitNameNotFound,
 		},
 	}
 
@@ -1316,13 +1315,13 @@ func withTrait_OnBuilderMultiple(t *testing.T) {
 			desc:    "set one trait with incorrect value",
 			taits:   []string{"trait1", "incorrect trait"},
 			want:    func() testStruct { return testStruct{} },
-			wantErr: types.ErrWithTraitNameNotFound,
+			wantErr: errWithTraitNameNotFound,
 		},
 		{
 			desc:    "set two traits with incorrect value",
 			taits:   []string{"incorrect trait1", "incorrect trait2"},
 			want:    func() testStruct { return testStruct{} },
-			wantErr: types.ErrWithTraitNameNotFound,
+			wantErr: errWithTraitNameNotFound,
 		},
 	}
 
@@ -1439,7 +1438,7 @@ func withTraits_OnBuilderList(t *testing.T) {
 			desc:    "set trait with incorrect value",
 			taits:   []string{"incorrect trait"},
 			want:    func() []testStruct { return []testStruct{} },
-			wantErr: types.ErrWithTraitNameNotFound,
+			wantErr: errWithTraitNameNotFound,
 		},
 	}
 
@@ -1540,13 +1539,13 @@ func setZero_OnBuilderWithBluePrint(t *testing.T) {
 			desc:          "set incorrect field",
 			setZeroFields: []string{"incorrect field"},
 			want:          testStruct{},
-			wantErr:       types.ErrFieldNotFound,
+			wantErr:       errFieldNotFound,
 		},
 		{
 			desc:          "set private field",
 			setZeroFields: []string{"privateField"},
 			want:          testStruct{},
-			wantErr:       types.ErrFieldCantSet,
+			wantErr:       errFieldCantSet,
 		},
 	}
 
@@ -1619,13 +1618,13 @@ func setZero_OnBuilderWithoutBluePrint(t *testing.T) {
 			desc:          "set incorrect field",
 			setZeroFields: []string{"incorrect field"},
 			want:          testStruct{},
-			wantErr:       types.ErrFieldNotFound,
+			wantErr:       errFieldNotFound,
 		},
 		{
 			desc:          "set private field",
 			setZeroFields: []string{"privateField"},
 			want:          testStruct{},
-			wantErr:       types.ErrFieldCantSet,
+			wantErr:       errFieldCantSet,
 		},
 	}
 
@@ -1709,27 +1708,27 @@ func setZero_OnBuilderListWithBluePrint(t *testing.T) {
 			desc:    "set zero values at negative index",
 			index:   -1,
 			want:    []testStruct{},
-			wantErr: types.ErrIndexIsOutOfRange,
+			wantErr: errIndexIsOutOfRange,
 		},
 		{
 			desc:    "set zero values at invalid index",
 			index:   5,
 			want:    []testStruct{},
-			wantErr: types.ErrIndexIsOutOfRange,
+			wantErr: errIndexIsOutOfRange,
 		},
 		{
 			desc:          "set incorrect field",
 			index:         0,
 			setZeroFields: []string{"incorrect field"},
 			want:          []testStruct{},
-			wantErr:       types.ErrFieldNotFound,
+			wantErr:       errFieldNotFound,
 		},
 		{
 			desc:          "set private field",
 			index:         0,
 			setZeroFields: []string{"privateField"},
 			want:          []testStruct{},
-			wantErr:       types.ErrFieldCantSet,
+			wantErr:       errFieldCantSet,
 		},
 	}
 
@@ -1796,27 +1795,27 @@ func setZero_OnBuilderListWithoutBluePrint(t *testing.T) {
 			desc:    "set zero values at negative index",
 			index:   -1,
 			want:    []testStruct{},
-			wantErr: types.ErrIndexIsOutOfRange,
+			wantErr: errIndexIsOutOfRange,
 		},
 		{
 			desc:    "set zero values at invalid index",
 			index:   5,
 			want:    []testStruct{},
-			wantErr: types.ErrIndexIsOutOfRange,
+			wantErr: errIndexIsOutOfRange,
 		},
 		{
 			desc:          "set incorrect field",
 			index:         0,
 			setZeroFields: []string{"incorrect field"},
 			want:          []testStruct{},
-			wantErr:       types.ErrFieldNotFound,
+			wantErr:       errFieldNotFound,
 		},
 		{
 			desc:          "set private field",
 			index:         0,
 			setZeroFields: []string{"privateField"},
 			want:          []testStruct{},
-			wantErr:       types.ErrFieldCantSet,
+			wantErr:       errFieldCantSet,
 		},
 	}
 
@@ -1889,13 +1888,13 @@ func setZero_OnBuilderMany(t *testing.T) {
 			desc:          "set incorrect field",
 			setZeroFields: [][]string{{"incorrect field"}},
 			want:          testStruct{},
-			wantErr:       types.ErrFieldNotFound,
+			wantErr:       errFieldNotFound,
 		},
 		{
 			desc:          "set private field",
 			setZeroFields: [][]string{{"privateField"}},
 			want:          testStruct{},
-			wantErr:       types.ErrFieldCantSet,
+			wantErr:       errFieldCantSet,
 		},
 	}
 
@@ -1974,7 +1973,7 @@ func setZero_OnBuilderListMany(t *testing.T) {
 				0:  {"PtrSlice", "SlicePtrStruct"},
 			},
 			want:    []testStruct{},
-			wantErr: types.ErrIndexIsOutOfRange,
+			wantErr: errIndexIsOutOfRange,
 		},
 		{
 			desc:       "set zero values at invalid index",
@@ -1984,7 +1983,7 @@ func setZero_OnBuilderListMany(t *testing.T) {
 				0: {"PtrSlice", "SlicePtrStruct"},
 			},
 			want:    []testStruct{},
-			wantErr: types.ErrIndexIsOutOfRange,
+			wantErr: errIndexIsOutOfRange,
 		},
 		{
 			desc:       "set incorrect field",
@@ -1993,7 +1992,7 @@ func setZero_OnBuilderListMany(t *testing.T) {
 				0: {"incorrect field"},
 			},
 			want:    []testStruct{},
-			wantErr: types.ErrFieldNotFound,
+			wantErr: errFieldNotFound,
 		},
 		{
 			desc:       "set private field",
@@ -2002,7 +2001,7 @@ func setZero_OnBuilderListMany(t *testing.T) {
 				0: {"privateField"},
 			},
 			want:    []testStruct{},
-			wantErr: types.ErrFieldCantSet,
+			wantErr: errFieldCantSet,
 		},
 	}
 
