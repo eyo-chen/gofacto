@@ -1177,7 +1177,7 @@ func withTrait_OnBuilder(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			got, err := f.Build(mockCTX).WithTrait(tt.trait).Get()
+			got, err := f.Build(mockCTX).SetTrait(tt.trait).Get()
 
 			if tt.wantErr != nil {
 				if !errors.Is(err, tt.wantErr) {
@@ -1249,7 +1249,7 @@ func withTrait_OnBuilderList(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			got, err := f.BuildList(mockCTX, 2).WithTrait(tt.tait).Get()
+			got, err := f.BuildList(mockCTX, 2).SetTrait(tt.tait).Get()
 
 			if tt.wantErr != nil {
 				if !errors.Is(err, tt.wantErr) {
@@ -1327,7 +1327,7 @@ func withTrait_OnBuilderMultiple(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			got, err := f.Build(mockCTX).WithTrait(tt.taits[0]).WithTrait(tt.taits[1]).Get()
+			got, err := f.Build(mockCTX).SetTrait(tt.taits[0]).SetTrait(tt.taits[1]).Get()
 
 			if tt.wantErr != nil {
 				if !errors.Is(err, tt.wantErr) {
@@ -1444,7 +1444,7 @@ func withTraits_OnBuilderList(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			got, err := f.BuildList(mockCTX, 2).WithTraits(tt.taits...).Get()
+			got, err := f.BuildList(mockCTX, 2).SetTraits(tt.taits...).Get()
 
 			if tt.wantErr != nil {
 				if !errors.Is(err, tt.wantErr) {
