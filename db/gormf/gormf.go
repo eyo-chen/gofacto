@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/eyo-chen/gofacto/db"
+	"github.com/eyo-chen/gofacto/internal/db"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )

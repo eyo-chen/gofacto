@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/eyo-chen/gofacto/db"
+	"github.com/eyo-chen/gofacto/internal/db"
 	"github.com/eyo-chen/gofacto/internal/types"
 	"github.com/eyo-chen/gofacto/internal/utils"
 )
 
 // Factory is the gofacto factory to create mock data
 type Factory[T any] struct {
-	db             db.Database
+	db             database
 	blueprint      blueprintFunc[T]
 	storageName    string
 	dataType       reflect.Type
@@ -98,7 +98,7 @@ func (f *Factory[T]) WithStorageName(name string) *Factory[T] {
 }
 
 // WithDB sets the database connection
-func (f *Factory[T]) WithDB(db db.Database) *Factory[T] {
+func (f *Factory[T]) WithDB(db database) *Factory[T] {
 	f.db = db
 	return f
 }

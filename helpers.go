@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/eyo-chen/gofacto/db"
+	"github.com/eyo-chen/gofacto/internal/db"
 	"github.com/eyo-chen/gofacto/internal/types"
 	"github.com/eyo-chen/gofacto/internal/utils"
 )

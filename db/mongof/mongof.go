@@ -7,7 +7,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 
-	"github.com/eyo-chen/gofacto/db"
+	"github.com/eyo-chen/gofacto/internal/db"
 )
 
 // config is for MongoDB configuration
