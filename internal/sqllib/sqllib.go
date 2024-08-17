@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/eyo-chen/gofacto/db"
+	"github.com/eyo-chen/gofacto/internal/db"
 	"github.com/eyo-chen/gofacto/internal/utils"
 )
 
@@ -36,7 +36,7 @@ type sqlDialect interface {
 }
 
 // NewConfig initializes a sqllib config for raw SQL database operations
-func NewConfig(db *sql.DB, dialect sqlDialect, packageName string) db.Database {
+func NewConfig(db *sql.DB, dialect sqlDialect, packageName string) *Config {
 	return &Config{
 		db:          db,
 		dialect:     dialect,

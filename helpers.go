@@ -8,8 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/eyo-chen/gofacto/db"
-	"github.com/eyo-chen/gofacto/internal/types"
+	"github.com/eyo-chen/gofacto/internal/db"
 	"github.com/eyo-chen/gofacto/internal/utils"
 )
 
@@ -144,18 +143,18 @@ func (f *Factory[T]) setAssValue(v interface{}) error {
 	// check if it's a pointer
 	if typeOfV.Kind() != reflect.Ptr {
 		name := typeOfV.Name()
-		return fmt.Errorf("%s, %v: %e", name, v, types.ErrIsNotPtr)
+		return fmt.Errorf("%s, %v: %e", name, v, errIsNotPtr)
 	}
 
 	name := typeOfV.Elem().Name()
 	// check if it's a pointer to a struct
 	if typeOfV.Elem().Kind() != reflect.Struct {
-		return fmt.Errorf("%s, %v: %e", name, v, types.ErrIsNotStructPtr)
+		return fmt.Errorf("%s, %v: %e", name, v, errIsNotStructPtr)
 	}
 
 	// check if it's existed in tagToInfo
 	if _, ok := f.tagToInfo[name]; !ok {
-		return fmt.Errorf("type %s, value %v: %e", name, v, types.ErrNotFoundAtTag)
+		return fmt.Errorf("type %s, value %v: %e", name, v, errNotFoundAtTag)
 	}
 
 	f.setNonZeroValues(v)
@@ -180,15 +179,15 @@ func copyValues[T any](dest *T, src T) error {
 	srcValue := reflect.ValueOf(src)
 
 	if destValue.Kind() != reflect.Struct {
-		return types.ErrDestIsNotStruct
+		return errDestIsNotStruct
 	}
 
 	if srcValue.Kind() != reflect.Struct {
-		return types.ErrSrcIsNotStruct
+		return errSrcIsNotStruct
 	}
 
 	if destValue.Type() != srcValue.Type() {
-		return fmt.Errorf("%w: %s and %s", types.ErrTypeDiff, destValue.Type(), srcValue.Type())
+		return fmt.Errorf("%w: %s and %s", errTypeDiff, destValue.Type(), srcValue.Type())
 	}
 
 	for i := 0; i < destValue.NumField(); i++ {
@@ -249,21 +248,21 @@ func genNonZeroValue(t reflect.Type, i int) interface{} {
 func setForeignKey(target interface{}, name string, source interface{}) error {
 	targetField := reflect.ValueOf(target).Elem().FieldByName(name)
 	if !targetField.IsValid() {
-		return fmt.Errorf("%s: %w", name, types.ErrFieldNotFound)
+		return fmt.Errorf("%s: %w", name, errFieldNotFound)
 	}
 
 	if !targetField.CanSet() {
-		return fmt.Errorf("%s: %w", name, types.ErrFieldCantSet)
+		return fmt.Errorf("%s: %w", name, errFieldCantSet)
 	}
 
 	sourceIDField := reflect.ValueOf(source).Elem().FieldByName("ID")
 	if !sourceIDField.IsValid() {
-		return fmt.Errorf("%s: %w", "ID", types.ErrFieldNotFound)
+		return fmt.Errorf("%s: %w", "ID", errFieldNotFound)
 	}
 
 	sourceIDKind := sourceIDField.Kind()
 	if !isIntType(sourceIDKind) && !isUintType(sourceIDKind) {
-		return types.ErrNotInt
+		return errNotInt
 	}
 
 	setIntValue(targetField, sourceIDField)
@@ -284,7 +283,7 @@ func extractTag(dataType reflect.Type) (map[string]tagInfo, []string, error) {
 
 		parts := strings.Split(tag, ",")
 		if len(parts) == 0 {
-			return tagToInfo, ignoreFields, types.ErrTagFormat
+			return tagToInfo, ignoreFields, errTagFormat
 		}
 
 		var structName, tableName, foreignField string
@@ -296,7 +295,7 @@ func extractTag(dataType reflect.Type) (map[string]tagInfo, []string, error) {
 			}
 
 			if len(pairs) != 2 {
-				return tagToInfo, ignoreFields, types.ErrTagFormat
+				return tagToInfo, ignoreFields, errTagFormat
 			}
 
 			key, value := pairs[0], pairs[1]
@@ -308,7 +307,7 @@ func extractTag(dataType reflect.Type) (map[string]tagInfo, []string, error) {
 			case "foreignField":
 				foreignField = value
 			default:
-				return tagToInfo, ignoreFields, types.ErrTagFormat
+				return tagToInfo, ignoreFields, errTagFormat
 			}
 		}
 
@@ -363,11 +362,11 @@ func setField(target interface{}, fieldName string, source interface{}) error {
 	fieldVal := structValue.FieldByName(fieldName)
 
 	if !fieldVal.IsValid() {
-		return fmt.Errorf("%s: %w", fieldName, types.ErrFieldNotFound)
+		return fmt.Errorf("%s: %w", fieldName, errFieldNotFound)
 	}
 
 	if !fieldVal.CanSet() {
-		return fmt.Errorf("%s: %w", fieldName, types.ErrFieldCantSet)
+		return fmt.Errorf("%s: %w", fieldName, errFieldCantSet)
 	}
 
 	val := reflect.ValueOf(source)
@@ -378,7 +377,7 @@ func setField(target interface{}, fieldName string, source interface{}) error {
 	}
 
 	if fieldVal.Type() != val.Type() {
-		return types.ErrTypeDiff
+		return errTypeDiff
 	}
 
 	fieldVal.Set(val)
