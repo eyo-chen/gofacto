@@ -1,4 +1,4 @@
-package utils
+package typeconv
 
 import "testing"
 
@@ -7,7 +7,7 @@ type Person struct {
 	Name string
 }
 
-func TestCvtToAnysWithOW(t *testing.T) {
+func TestToAnysWithOW(t *testing.T) {
 	tests := []struct {
 		desc string
 		i    int
@@ -54,7 +54,7 @@ func TestCvtToAnysWithOW(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			res := CvtToAnysWithOW(test.i, test.ow)
+			res := ToAnysWithOW(test.i, test.ow)
 
 			if len(res) != len(test.want) {
 				t.Errorf("expected length of %d, but got %d", len(test.want), len(res))
@@ -69,7 +69,7 @@ func TestCvtToAnysWithOW(t *testing.T) {
 	}
 }
 
-func TestCvtToAnysWithOWs(t *testing.T) {
+func TestToAnysWithOWs(t *testing.T) {
 	tests := []struct {
 		desc string
 		i    int
@@ -128,7 +128,7 @@ func TestCvtToAnysWithOWs(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			res := CvtToAnysWithOWs(test.i, test.ows...)
+			res := ToAnysWithOWs(test.i, test.ows...)
 
 			if len(res) != len(test.want) {
 				t.Errorf("expected length of %d, but got %d", len(test.want), len(res))
@@ -143,7 +143,7 @@ func TestCvtToAnysWithOWs(t *testing.T) {
 	}
 }
 
-func TestCvtToT(t *testing.T) {
+func TestToT(t *testing.T) {
 	tests := []struct {
 		desc string
 		vals []interface{}
@@ -168,7 +168,7 @@ func TestCvtToT(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			res := CvtToT[Person](test.vals)
+			res := ToT[Person](test.vals)
 
 			if len(res) != len(test.want) {
 				t.Errorf("expected length of %d, but got %d", len(test.want), len(res))
@@ -183,7 +183,7 @@ func TestCvtToT(t *testing.T) {
 	}
 }
 
-func TestCvtToPointerT(t *testing.T) {
+func TestToPointerT(t *testing.T) {
 	tests := []struct {
 		desc string
 		vals []interface{}
@@ -208,7 +208,7 @@ func TestCvtToPointerT(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			res := CvtToPointerT[Person](test.vals)
+			res := ToPointerT[Person](test.vals)
 
 			if len(res) != len(test.want) {
 				t.Errorf("expected length of %d, but got %d", len(test.want), len(res))
