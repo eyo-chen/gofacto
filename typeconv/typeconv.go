@@ -1,8 +1,4 @@
-package utils
-
-func Bool(val bool) *bool {
-	return &val
-}
+package typeconv
 
 // CvtToAnysWithOW converts the given number of values to a slice of pointers of given type with the given one overwrite.
 func CvtToAnysWithOW[T any](i int, ow *T) []interface{} {

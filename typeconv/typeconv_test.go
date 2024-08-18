@@ -1,4 +1,4 @@
-package utils
+package typeconv
 
 import "testing"
 
