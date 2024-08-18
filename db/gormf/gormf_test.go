@@ -44,7 +44,7 @@ type Author struct {
 
 type Book struct {
 	ID               int64           `gorm:"id;primaryKey"`
-	AuthorID         int64           `gorm:"author_id" gofacto:"struct:Author,foreignField:Author"`
+	AuthorID         int64           `gorm:"author_id" gofacto:"foreignKey,struct:Author,field:Author"`
 	Author           *Author         `gorm:"foreignKey:AuthorID"`
 	Title            string          `gorm:"title"`
 	ISBN             *string         `gorm:"isbn"`
