@@ -271,51 +271,61 @@ func setForeignKey(target interface{}, name string, source interface{}) error {
 
 // extractTag generates the map from tag to metadata
 func extractTag(dataType reflect.Type) (map[string]tagInfo, []string, error) {
-	tagToInfo := map[string]tagInfo{}
-	ignoreFields := []string{}
+	numField := dataType.NumField()
+	ignoreFields := make([]string, 0, numField/2)
+	tagToInfo := make(map[string]tagInfo)
 
-	for i := 0; i < dataType.NumField(); i++ {
+	for i := 0; i < numField; i++ {
 		field := dataType.Field(i)
 		tag := field.Tag.Get(packageName)
 		if tag == "" {
 			continue
 		}
 
-		parts := strings.Split(tag, ",")
+		parts := strings.Split(tag, ";")
 		if len(parts) == 0 {
-			return tagToInfo, ignoreFields, errTagFormat
+			return nil, nil, errTagFormat
 		}
 
 		var structName, tableName, foreignField string
-		for _, p := range parts {
-			pairs := strings.Split(p, ":")
-			if len(pairs) == 1 && pairs[0] == "omit" {
+		for _, part := range parts {
+			if part == "omit" {
 				ignoreFields = append(ignoreFields, field.Name)
 				continue
 			}
 
-			if len(pairs) != 2 {
-				return tagToInfo, ignoreFields, errTagFormat
+			subParts := strings.Split(part, ",")
+			if subParts[0] != "foreignKey" {
+				return nil, nil, errTagFormat
 			}
 
-			key, value := pairs[0], pairs[1]
-			switch key {
-			case "struct":
-				structName = value
-			case "table":
-				tableName = value
-			case "foreignField":
-				foreignField = value
-			default:
-				return tagToInfo, ignoreFields, errTagFormat
+			for _, subPart := range subParts[1:] {
+				kv := strings.SplitN(subPart, ":", 2)
+				if len(kv) != 2 {
+					return nil, nil, errTagFormat
+				}
+
+				switch kv[0] {
+				case "struct":
+					structName = kv[1]
+				case "table":
+					tableName = kv[1]
+				case "field":
+					foreignField = kv[1]
+				default:
+					return nil, nil, errTagFormat
+				}
 			}
 		}
 
 		if tableName == "" {
 			tableName = utils.CamelToSnake(structName) + "s"
 		}
-
 		tagToInfo[structName] = tagInfo{tableName: tableName, fieldName: field.Name, foreignField: foreignField}
+	}
+
+	if len(ignoreFields) == 0 {
+		ignoreFields = nil
 	}
 
 	return tagToInfo, ignoreFields, nil
