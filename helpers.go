@@ -18,7 +18,7 @@ const (
 
 // setNonZeroValues sets non-zero values to the given struct.
 // Parameter v must be a pointer to a struct
-func (f *Factory[T]) setNonZeroValues(v interface{}) {
+func (f *Factory[T]) setNonZeroValues(v interface{}, ignoreFields []string) {
 	val := reflect.ValueOf(v).Elem()
 	typeOfVal := val.Type()
 
@@ -27,7 +27,7 @@ func (f *Factory[T]) setNonZeroValues(v interface{}) {
 		curField := typeOfVal.Field(k)
 
 		// skip ignored fields
-		if slices.Contains(f.ignoreFields, curField.Name) {
+		if slices.Contains(ignoreFields, curField.Name) {
 			continue
 		}
 
@@ -59,28 +59,28 @@ func (f *Factory[T]) setNonZeroValues(v interface{}) {
 
 		// handle struct
 		if curField.Type.Kind() == reflect.Struct {
-			f.setNonZeroValues(curVal.Addr().Interface())
+			f.setNonZeroValues(curVal.Addr().Interface(), ignoreFields)
 			continue
 		}
 
 		// handle pointer to struct
 		if curField.Type.Kind() == reflect.Ptr && curField.Type.Elem().Kind() == reflect.Struct {
 			newInstance := reflect.New(curField.Type.Elem()).Elem()
-			f.setNonZeroValues(newInstance.Addr().Interface())
+			f.setNonZeroValues(newInstance.Addr().Interface(), ignoreFields)
 			curVal.Set(newInstance.Addr())
 			continue
 		}
 
 		// handle slice
 		if curField.Type.Kind() == reflect.Slice {
-			f.setNonZeroSlice(curVal.Addr().Interface())
+			f.setNonZeroSlice(curVal.Addr().Interface(), ignoreFields)
 			continue
 		}
 
 		// handle pointer to slice
 		if curField.Type.Kind() == reflect.Ptr && curField.Type.Elem().Kind() == reflect.Slice {
 			newInstance := reflect.New(curField.Type.Elem()).Elem()
-			f.setNonZeroSlice(newInstance.Addr().Interface())
+			f.setNonZeroSlice(newInstance.Addr().Interface(), ignoreFields)
 			curVal.Set(newInstance.Addr())
 			continue
 		}
@@ -94,13 +94,13 @@ func (f *Factory[T]) setNonZeroValues(v interface{}) {
 
 // setNonZeroSlice sets non-zero values to the given slice.
 // Parameter v must be a pointer to a slice
-func (f *Factory[T]) setNonZeroSlice(v interface{}) {
+func (f *Factory[T]) setNonZeroSlice(v interface{}, ignoreFields []string) {
 	val := reflect.ValueOf(v).Elem()
 
 	// handle slice
 	if val.Type().Elem().Kind() == reflect.Slice {
 		e := reflect.New(val.Type().Elem()).Elem()
-		f.setNonZeroSlice(e.Addr().Interface())
+		f.setNonZeroSlice(e.Addr().Interface(), ignoreFields)
 		val.Set(reflect.Append(val, e))
 		return
 	}
@@ -108,7 +108,7 @@ func (f *Factory[T]) setNonZeroSlice(v interface{}) {
 	// handle slice of pointers
 	if val.Type().Elem().Kind() == reflect.Ptr && val.Type().Elem().Elem().Kind() == reflect.Slice {
 		e := reflect.New(val.Type().Elem().Elem()).Elem()
-		f.setNonZeroSlice(e.Addr().Interface())
+		f.setNonZeroSlice(e.Addr().Interface(), ignoreFields)
 		val.Set(reflect.Append(val, e.Addr()))
 		return
 	}
@@ -116,7 +116,7 @@ func (f *Factory[T]) setNonZeroSlice(v interface{}) {
 	// handle struct
 	if val.Type().Elem().Kind() == reflect.Struct {
 		e := reflect.New(val.Type().Elem()).Elem()
-		f.setNonZeroValues(e.Addr().Interface())
+		f.setNonZeroValues(e.Addr().Interface(), ignoreFields)
 		val.Set(reflect.Append(val, e))
 		return
 	}
@@ -124,7 +124,7 @@ func (f *Factory[T]) setNonZeroSlice(v interface{}) {
 	// handle pointer to struct
 	if val.Type().Elem().Kind() == reflect.Ptr && val.Type().Elem().Elem().Kind() == reflect.Struct {
 		e := reflect.New(val.Type().Elem().Elem())
-		f.setNonZeroValues(e.Interface())
+		f.setNonZeroValues(e.Interface(), ignoreFields)
 		val.Set(reflect.Append(val, e))
 		return
 	}
@@ -137,27 +137,27 @@ func (f *Factory[T]) setNonZeroSlice(v interface{}) {
 }
 
 // setAssValue sets the value to the associations value
-func (f *Factory[T]) setAssValue(v interface{}) error {
+func (f *Factory[T]) setAssValue(v interface{}, ignoreFields []string) error {
 	typeOfV := reflect.TypeOf(v)
 
 	// check if it's a pointer
 	if typeOfV.Kind() != reflect.Ptr {
 		name := typeOfV.Name()
-		return fmt.Errorf("%s, %v: %e", name, v, errIsNotPtr)
+		return fmt.Errorf("%s, %v: %w", name, v, errIsNotPtr)
 	}
 
 	name := typeOfV.Elem().Name()
 	// check if it's a pointer to a struct
 	if typeOfV.Elem().Kind() != reflect.Struct {
-		return fmt.Errorf("%s, %v: %e", name, v, errIsNotStructPtr)
+		return fmt.Errorf("%s, %v: %w", name, v, errIsNotStructPtr)
 	}
 
 	// check if it's existed in tagToInfo
 	if _, ok := f.tagToInfo[name]; !ok {
-		return fmt.Errorf("type %s, value %v: %e", name, v, errNotFoundAtTag)
+		return fmt.Errorf("type %s, value %v: %w", name, v, errNotFoundAtTag)
 	}
 
-	f.setNonZeroValues(v)
+	f.setNonZeroValues(v, ignoreFields)
 	return nil
 }
 

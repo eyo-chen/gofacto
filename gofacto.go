@@ -62,7 +62,7 @@ type builderList[T any] struct {
 	f    *Factory[T]
 }
 
-// New creates a new gofacto factory
+// New initializes a new factory
 func New[T any](v T) *Factory[T] {
 	dataType := reflect.TypeOf(v)
 
@@ -127,7 +127,7 @@ func (f *Factory[T]) Build(ctx context.Context) *builder[T] {
 	}
 
 	if f.isSetZeroValue {
-		f.setNonZeroValues(&v)
+		f.setNonZeroValues(&v, f.ignoreFields)
 	}
 
 	f.index++
@@ -159,7 +159,7 @@ func (f *Factory[T]) BuildList(ctx context.Context, n int) *builderList[T] {
 		}
 
 		if f.isSetZeroValue {
-			f.setNonZeroValues(&v)
+			f.setNonZeroValues(&v, f.ignoreFields)
 		}
 
 		list[i] = &v
@@ -427,7 +427,7 @@ func (b *builder[T]) WithOne(v interface{}, ignoreFields ...string) *builder[T] 
 		return b
 	}
 
-	if err := b.f.setAssValue(v); err != nil {
+	if err := b.f.setAssValue(v, ignoreFields); err != nil {
 		b.err = err
 		return b
 	}
@@ -444,7 +444,7 @@ func (b *builderList[T]) WithOne(v interface{}, ignoreFields ...string) *builder
 		return b
 	}
 
-	if err := b.f.setAssValue(v); err != nil {
+	if err := b.f.setAssValue(v, ignoreFields); err != nil {
 		b.err = err
 		return b
 	}
@@ -463,7 +463,7 @@ func (b *builderList[T]) WithMany(values []interface{}, ignoreFields ...string) 
 
 	var curValName string
 	for _, v := range values {
-		if err := b.f.setAssValue(v); err != nil {
+		if err := b.f.setAssValue(v, ignoreFields); err != nil {
 			b.err = err
 			return b
 		}
