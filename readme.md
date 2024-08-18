@@ -29,7 +29,7 @@ type Customer struct {
 
 type Order struct {
     ID          int
-    CustomerID  int       `gofacto:"struct:Customer"`
+    CustomerID  int       `gofacto:"foreignKey,struct:Customer"`
     OrderDate   time.Time
     Amount      float64
 }
