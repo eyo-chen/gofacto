@@ -143,18 +143,18 @@ func (f *Factory[T]) setAssValue(v interface{}, ignoreFields []string) error {
 	// check if it's a pointer
 	if typeOfV.Kind() != reflect.Ptr {
 		name := typeOfV.Name()
-		return fmt.Errorf("%s, %v: %e", name, v, errIsNotPtr)
+		return fmt.Errorf("%s, %v: %w", name, v, errIsNotPtr)
 	}
 
 	name := typeOfV.Elem().Name()
 	// check if it's a pointer to a struct
 	if typeOfV.Elem().Kind() != reflect.Struct {
-		return fmt.Errorf("%s, %v: %e", name, v, errIsNotStructPtr)
+		return fmt.Errorf("%s, %v: %w", name, v, errIsNotStructPtr)
 	}
 
 	// check if it's existed in tagToInfo
 	if _, ok := f.tagToInfo[name]; !ok {
-		return fmt.Errorf("type %s, value %v: %e", name, v, errNotFoundAtTag)
+		return fmt.Errorf("type %s, value %v: %w", name, v, errNotFoundAtTag)
 	}
 
 	f.setNonZeroValues(v, ignoreFields)
