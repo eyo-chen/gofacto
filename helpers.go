@@ -44,6 +44,11 @@ func (f *Factory[T]) setNonZeroValues(v interface{}, ignoreFields []string) {
 			}
 		}
 
+		// skip client-defined types
+		if curField.Type.PkgPath() != "" {
+			continue
+		}
+
 		// handle time.Time
 		if curField.Type == reflect.TypeOf(time.Time{}) {
 			curVal.Set(reflect.ValueOf(time.Now()))
