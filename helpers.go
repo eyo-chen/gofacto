@@ -272,7 +272,7 @@ func setForeignKey(target interface{}, name string, source interface{}) error {
 // extractTag generates the map from tag to metadata
 func extractTag(dataType reflect.Type) (map[string]tagInfo, []string, error) {
 	numField := dataType.NumField()
-	ignoreFields := make([]string, 0, numField/2)
+	var ignoreFields []string
 	tagToInfo := make(map[string]tagInfo)
 
 	for i := 0; i < numField; i++ {
@@ -322,10 +322,6 @@ func extractTag(dataType reflect.Type) (map[string]tagInfo, []string, error) {
 			tableName = utils.CamelToSnake(structName) + "s"
 		}
 		tagToInfo[structName] = tagInfo{tableName: tableName, fieldName: field.Name, foreignField: foreignField}
-	}
-
-	if len(ignoreFields) == 0 {
-		ignoreFields = nil
 	}
 
 	return tagToInfo, ignoreFields, nil
