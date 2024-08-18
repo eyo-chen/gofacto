@@ -378,7 +378,8 @@ type Order struct {
   Amount      float64
 }
 ```
-If the struct has a custom type, the clients need to set the values manually by using blueprint or overwrite
+If the struct has a custom type, gofacto will ignore the field, and leave it as zero value.<br>
+The clients need to set the values manually by using blueprint or overwrite if they don't want the zero value.<br>
 
 3. gofacto only supports basic associations relationship.
 If your database schema has a complex associations relationship, you might need to set the associations manually.<br>
