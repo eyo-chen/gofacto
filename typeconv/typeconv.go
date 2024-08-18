@@ -1,7 +1,7 @@
 package typeconv
 
-// CvtToAnysWithOW converts the given number of values to a slice of pointers of given type with the given one overwrite.
-func CvtToAnysWithOW[T any](i int, ow *T) []interface{} {
+// ToAnysWithOW converts the given number of values to a slice of pointers of given type with the given one overwrite.
+func ToAnysWithOW[T any](i int, ow *T) []interface{} {
 	res := make([]interface{}, i)
 	for k := 0; k < i; k++ {
 		if ow != nil {
@@ -16,8 +16,8 @@ func CvtToAnysWithOW[T any](i int, ow *T) []interface{} {
 	return res
 }
 
-// CvtToAnysWithOWs converts the given number of values to a slice of pointers to the given type with the given multiple overwrites.
-func CvtToAnysWithOWs[T any](i int, ows ...*T) []interface{} {
+// ToAnysWithOWs converts the given number of values to a slice of pointers to the given type with the given multiple overwrites.
+func ToAnysWithOWs[T any](i int, ows ...*T) []interface{} {
 	res := make([]interface{}, i)
 	for k := 0; k < i; k++ {
 		var v T
@@ -31,8 +31,8 @@ func CvtToAnysWithOWs[T any](i int, ows ...*T) []interface{} {
 	return res
 }
 
-// CvtToAnys converts the given slice of any type to a slice of values of the given type. Note that the given slice must be a slice of pointers.
-func CvtToT[T any](vals []interface{}) []T {
+// ToAnys converts the given slice of any type to a slice of values of the given type. Note that the given slice must be a slice of pointers.
+func ToT[T any](vals []interface{}) []T {
 	res := make([]T, len(vals))
 	for k, v := range vals {
 		res[k] = *v.(*T)
@@ -41,8 +41,8 @@ func CvtToT[T any](vals []interface{}) []T {
 	return res
 }
 
-// CvtToPointerT converts the given slice of any type to a slice of pointers to the given type. Note that the given slice must be a slice of pointers.
-func CvtToPointerT[T any](vals []interface{}) []*T {
+// ToPointerT converts the given slice of any type to a slice of pointers to the given type. Note that the given slice must be a slice of pointers.
+func ToPointerT[T any](vals []interface{}) []*T {
 	res := make([]*T, len(vals))
 	for k, v := range vals {
 		res[k] = v.(*T)
