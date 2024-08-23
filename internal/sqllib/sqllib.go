@@ -44,7 +44,7 @@ func NewConfig(db *sql.DB, dialect sqlDialect, packageName string) *Config {
 	}
 }
 
-func (c *Config) Insert(ctx context.Context, params db.InserParams) (interface{}, error) {
+func (c *Config) Insert(ctx context.Context, params db.InsertParams) (interface{}, error) {
 	rawStmt, vals := c.prepareStmtAndVals(params.StorageName, params.Value)
 
 	stmt, err := c.db.Prepare(rawStmt)
@@ -76,7 +76,7 @@ func (c *Config) Insert(ctx context.Context, params db.InserParams) (interface{}
 	return params.Value, nil
 }
 
-func (c *Config) InsertList(ctx context.Context, params db.InserListParams) ([]interface{}, error) {
+func (c *Config) InsertList(ctx context.Context, params db.InsertListParams) ([]interface{}, error) {
 	rawStmt, fieldValues := c.prepareStmtAndVals(params.StorageName, params.Values...)
 
 	stmt, err := c.db.Prepare(rawStmt)

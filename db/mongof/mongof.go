@@ -23,7 +23,7 @@ func NewConfig(db *mongo.Database) *config {
 	}
 }
 
-func (c *config) Insert(ctx context.Context, params db.InserParams) (interface{}, error) {
+func (c *config) Insert(ctx context.Context, params db.InsertParams) (interface{}, error) {
 	res, err := c.db.Collection(params.StorageName).InsertOne(ctx, params.Value)
 	if err != nil {
 		return nil, err
@@ -34,7 +34,7 @@ func (c *config) Insert(ctx context.Context, params db.InserParams) (interface{}
 	return params.Value, nil
 }
 
-func (c *config) InsertList(ctx context.Context, params db.InserListParams) ([]interface{}, error) {
+func (c *config) InsertList(ctx context.Context, params db.InsertListParams) ([]interface{}, error) {
 	res, err := c.db.Collection(params.StorageName).InsertMany(ctx, params.Values)
 	if err != nil {
 		return nil, err
