@@ -117,6 +117,8 @@ func (f *Factory[T]) WithTrait(name string, tr setTraiter[T]) *Factory[T] {
 // Reset resets the factory to its initial state
 func (f *Factory[T]) Reset() {
 	f.index = 1
+	f.err = nil
+	f.associations = map[string][]interface{}{}
 }
 
 // Build builds a value
