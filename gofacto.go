@@ -394,7 +394,7 @@ func (b *builder[T]) SetZero(fields ...string) *builder[T] {
 }
 
 // SetZero sets the fields to zero value for the given index.
-// The paramter i is the index of the list you want to set the zero value
+// The parameter i is the index of the list you want to set the zero value
 func (b *builderList[T]) SetZero(i int, fields ...string) *builderList[T] {
 	if b.err != nil {
 		return b
