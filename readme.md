@@ -1,4 +1,5 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/eyo-chen/gofacto.svg)](https://pkg.go.dev/github.com/eyo-chen/gofacto)
+[![Go Report Card](https://goreportcard.com/badge/github.com/eyo-chen/gofacto)](https://goreportcard.com/report/github.com/eyo-chen/gofacto)
 
 # gofacto
 
