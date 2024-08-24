@@ -156,7 +156,7 @@ func build_BluePrintAllFields(t *testing.T) {
 			}
 
 			if err := testutils.CompareVal(got, tt.want()); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -216,11 +216,11 @@ func build_BluePrintSomeFields(t *testing.T) {
 			}
 
 			if err := testutils.CompareVal(got, tt.want(), testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Bool", "PtrBool")...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 
 			if err := testutils.IsNotZeroVal(got, testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Bool", "PtrBool")...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -280,7 +280,7 @@ func build_BluePrintNotSetZeroValues(t *testing.T) {
 			}
 
 			if err := testutils.CompareVal(got, tt.want()); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -309,7 +309,7 @@ func build_NoBluePrint(t *testing.T) {
 			}
 
 			if err := testutils.IsNotZeroVal(got, testutils.FilterFields(testStruct{})...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -340,7 +340,7 @@ func build_NoBluePrintNotSetZeroValues(t *testing.T) {
 			}
 
 			if err := testutils.CompareVal(got, tt.want()); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -394,11 +394,11 @@ func build_IgnoreFields(t *testing.T) {
 			}
 
 			if err := testutils.IsZeroVal(got, tt.wantNonZeroFields...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 
 			if err := testutils.IsNotZeroVal(got, tt.wantZeroFields...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -561,7 +561,7 @@ func buildList_BluePrintAllFields(t *testing.T) {
 			}
 
 			if err := testutils.CompareVal(got, tt.want()); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -632,11 +632,11 @@ func buildList_BluePrintSomeFields(t *testing.T) {
 			}
 
 			if err := testutils.CompareVal(got, tt.want(), testutils.FilterFields(testStruct{}, "Int", "PtrStruct", "SlicePtrStruct")...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 
 			if err := testutils.IsNotZeroVal(got, testutils.FilterFields(testStruct{}, "Int", "PtrStruct", "SlicePtrStruct")...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -707,7 +707,7 @@ func buildList_BluePrintNotSetZeroValues(t *testing.T) {
 			}
 
 			if err := testutils.CompareVal(got, tt.want()); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -735,7 +735,7 @@ func buildList_NoBluePrintNotSetZeroValues(t *testing.T) {
 			}
 
 			if err := testutils.IsNotZeroVal(got, testutils.FilterFields(testStruct{})...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -766,7 +766,7 @@ func buildList_NoBluePrint(t *testing.T) {
 			}
 
 			if err := testutils.CompareVal(got, tt.want()); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -819,11 +819,11 @@ func buildList_IgnoreFields(t *testing.T) {
 			}
 
 			if err := testutils.IsZeroVal(got, tt.wantNonZeroFields...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 
 			if err := testutils.IsNotZeroVal(got, tt.wantZeroFields...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -944,7 +944,7 @@ func overwrite_OnBuilder(t *testing.T) {
 			}
 
 			if err := testutils.CompareVal(got, tt.want, testutils.FilterFields(testStruct{}, "Int", "PtrStruct", "SlicePtrStruct")...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -1008,7 +1008,7 @@ func overwrite_OnBuilderList(t *testing.T) {
 			}
 
 			if err := testutils.CompareVal(got, tt.want, testutils.FilterFields(testStruct{}, "Int", "PtrStruct", "SlicePtrStruct")...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -1114,7 +1114,7 @@ func overwrites_OnBuilderList(t *testing.T) {
 			}
 
 			if err := testutils.CompareVal(got, tt.want, testutils.FilterFields(testStruct{}, "Int", "PtrStruct", "SlicePtrStruct")...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -1185,14 +1185,14 @@ func withTrait_OnBuilder(t *testing.T) {
 				}
 
 				if err := testutils.CompareVal(got, tt.want()); err != nil {
-					t.Fatalf(err.Error())
+					t.Fatal(err.Error())
 				}
 
 				return
 			}
 
 			if err := testutils.CompareVal(got, tt.want(), testutils.FilterFields(testStruct{}, "PtrStr", "Time", "Slice")...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -1257,7 +1257,7 @@ func withTrait_OnBuilderList(t *testing.T) {
 				}
 
 				if err := testutils.CompareVal(got, tt.want()); err != nil {
-					t.Fatalf(err.Error())
+					t.Fatal(err.Error())
 				}
 
 				return
@@ -1268,7 +1268,7 @@ func withTrait_OnBuilderList(t *testing.T) {
 			}
 
 			if err := testutils.CompareVal(got, tt.want(), testutils.FilterFields(testStruct{}, "PtrStr", "Time", "Slice")...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -1335,7 +1335,7 @@ func withTrait_OnBuilderMultiple(t *testing.T) {
 				}
 
 				if err := testutils.CompareVal(got, tt.want()); err != nil {
-					t.Fatalf(err.Error())
+					t.Fatal(err.Error())
 				}
 
 				return
@@ -1346,7 +1346,7 @@ func withTrait_OnBuilderMultiple(t *testing.T) {
 			}
 
 			if err := testutils.CompareVal(got, tt.want(), testutils.FilterFields(testStruct{}, "PtrStr", "Time", "Slice")...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -1452,7 +1452,7 @@ func withTraits_OnBuilderList(t *testing.T) {
 				}
 
 				if err := testutils.CompareVal(got, tt.want()); err != nil {
-					t.Fatalf(err.Error())
+					t.Fatal(err.Error())
 				}
 
 				return
@@ -1463,7 +1463,7 @@ func withTraits_OnBuilderList(t *testing.T) {
 			}
 
 			if err := testutils.CompareVal(got, tt.want(), testutils.FilterFields(testStruct{}, "PtrStr", "Time", "Slice")...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -1559,7 +1559,7 @@ func setZero_OnBuilderWithBluePrint(t *testing.T) {
 				}
 
 				if err := testutils.CompareVal(got, tt.want); err != nil {
-					t.Fatalf(err.Error())
+					t.Fatal(err.Error())
 				}
 
 				return
@@ -1570,11 +1570,11 @@ func setZero_OnBuilderWithBluePrint(t *testing.T) {
 			}
 
 			if err := testutils.IsZeroVal(got, tt.wantNonZeroFields...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 
 			if err := testutils.IsNotZeroVal(got, tt.wantZeroFields...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -1638,7 +1638,7 @@ func setZero_OnBuilderWithoutBluePrint(t *testing.T) {
 				}
 
 				if err := testutils.CompareVal(got, tt.want); err != nil {
-					t.Fatalf(err.Error())
+					t.Fatal(err.Error())
 				}
 
 				return
@@ -1649,11 +1649,11 @@ func setZero_OnBuilderWithoutBluePrint(t *testing.T) {
 			}
 
 			if err := testutils.IsZeroVal(got, tt.wantNonZeroFields...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 
 			if err := testutils.IsNotZeroVal(got, tt.wantZeroFields...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -1742,7 +1742,7 @@ func setZero_OnBuilderListWithBluePrint(t *testing.T) {
 				}
 
 				if err := testutils.CompareVal(got, tt.want); err != nil {
-					t.Fatalf(err.Error())
+					t.Fatal(err.Error())
 				}
 
 				return
@@ -1754,11 +1754,11 @@ func setZero_OnBuilderListWithBluePrint(t *testing.T) {
 
 			for i, g := range got {
 				if err := testutils.IsZeroVal(g, tt.wantNonZeroFields[i]...); err != nil {
-					t.Fatalf(err.Error())
+					t.Fatal(err.Error())
 				}
 
 				if err := testutils.IsNotZeroVal(g, tt.wantZeroFields[i]...); err != nil {
-					t.Fatalf(err.Error())
+					t.Fatal(err.Error())
 				}
 			}
 		})
@@ -1829,7 +1829,7 @@ func setZero_OnBuilderListWithoutBluePrint(t *testing.T) {
 				}
 
 				if err := testutils.CompareVal(got, tt.want); err != nil {
-					t.Fatalf(err.Error())
+					t.Fatal(err.Error())
 				}
 
 				return
@@ -1841,11 +1841,11 @@ func setZero_OnBuilderListWithoutBluePrint(t *testing.T) {
 
 			for i, g := range got {
 				if err := testutils.IsZeroVal(g, tt.wantNonZeroFields[i]...); err != nil {
-					t.Fatalf(err.Error())
+					t.Fatal(err.Error())
 				}
 
 				if err := testutils.IsNotZeroVal(g, tt.wantZeroFields[i]...); err != nil {
-					t.Fatalf(err.Error())
+					t.Fatal(err.Error())
 				}
 			}
 		})
@@ -1913,7 +1913,7 @@ func setZero_OnBuilderMany(t *testing.T) {
 				}
 
 				if err := testutils.CompareVal(got, tt.want); err != nil {
-					t.Fatalf(err.Error())
+					t.Fatal(err.Error())
 				}
 
 				return
@@ -1924,11 +1924,11 @@ func setZero_OnBuilderMany(t *testing.T) {
 			}
 
 			if err := testutils.IsZeroVal(got, tt.wantNonZeroFields...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 
 			if err := testutils.IsNotZeroVal(got, tt.wantZeroFields...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -2020,7 +2020,7 @@ func setZero_OnBuilderListMany(t *testing.T) {
 				}
 
 				if err := testutils.CompareVal(got, tt.want); err != nil {
-					t.Fatalf(err.Error())
+					t.Fatal(err.Error())
 				}
 
 				return
@@ -2032,11 +2032,11 @@ func setZero_OnBuilderListMany(t *testing.T) {
 
 			for i, g := range got {
 				if err := testutils.IsZeroVal(g, tt.wantNonZeroFields[i]...); err != nil {
-					t.Fatalf(err.Error())
+					t.Fatal(err.Error())
 				}
 
 				if err := testutils.IsNotZeroVal(g, tt.wantZeroFields[i]...); err != nil {
-					t.Fatalf(err.Error())
+					t.Fatal(err.Error())
 				}
 			}
 		})
