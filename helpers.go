@@ -176,7 +176,7 @@ func (f *Factory[T]) setAssValue(v interface{}, ignoreFields []string) error {
 func (f *Factory[T]) insertAss(ctx context.Context) error {
 	for name, vals := range f.associations {
 		tableName := f.tagToInfo[name].tableName
-		if _, err := f.db.InsertList(ctx, db.InserListParams{StorageName: tableName, Values: vals}); err != nil {
+		if _, err := f.db.InsertList(ctx, db.InsertListParams{StorageName: tableName, Values: vals}); err != nil {
 			return err
 		}
 	}

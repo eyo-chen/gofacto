@@ -215,7 +215,7 @@ func (b *builder[T]) Insert() (T, error) {
 		}
 	}
 
-	val, err := b.f.db.Insert(b.ctx, db.InserParams{StorageName: b.f.storageName, Value: b.v})
+	val, err := b.f.db.Insert(b.ctx, db.InsertParams{StorageName: b.f.storageName, Value: b.v})
 	if err != nil {
 		return b.f.empty, err
 	}
@@ -249,7 +249,7 @@ func (b *builderList[T]) Insert() ([]T, error) {
 	for i, v := range b.list {
 		input[i] = v
 	}
-	vals, err := b.f.db.InsertList(b.ctx, db.InserListParams{StorageName: b.f.storageName, Values: input})
+	vals, err := b.f.db.InsertList(b.ctx, db.InsertListParams{StorageName: b.f.storageName, Values: input})
 	if err != nil {
 		return nil, err
 	}
