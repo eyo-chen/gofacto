@@ -203,12 +203,10 @@ func build_BluePrintSomeFields(t *testing.T) {
 				b := true
 
 				return testStruct{
-					Int:           i2,
-					PtrInt:        &i1,
-					CustomType:    "",
-					PtrCustomType: nil,
-					Bool:          true,
-					PtrBool:       &b,
+					Int:     i2,
+					PtrInt:  &i1,
+					Bool:    true,
+					PtrBool: &b,
 				}
 			},
 		},
@@ -235,7 +233,7 @@ func build_BluePrintSomeFields(t *testing.T) {
 				t.Fatalf("unexpected error %v", err)
 			}
 
-			if err := testutils.CompareVal(got, tt.want(), testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Bool", "PtrBool", "CustomType", "PtrCustomType")...); err != nil {
+			if err := testutils.CompareVal(got, tt.want(), testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Bool", "PtrBool")...); err != nil {
 				t.Fatal(err.Error())
 			}
 
@@ -838,12 +836,12 @@ func buildList_IgnoreFields(t *testing.T) {
 		{
 			desc:              "first build",
 			wantZeroFields:    []string{"Int", "PtrInt", "Str", "PtrStr", "Interface", "privateField"},
-			wantNonZeroFields: testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Str", "PtrStr", "Interface"),
+			wantNonZeroFields: testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Str", "PtrStr", "Interface", "privateField"),
 		},
 		{
 			desc:              "second build",
 			wantZeroFields:    []string{"Int", "PtrInt", "Str", "PtrStr", "Interface", "privateField"},
-			wantNonZeroFields: testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Str", "PtrStr", "Interface"),
+			wantNonZeroFields: testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Str", "PtrStr", "Interface", "privateField"),
 		},
 	}
 
@@ -1524,9 +1522,12 @@ func setZero_OnBuilderWithBluePrint(t *testing.T) {
 	blueprint := func(i int) testStruct {
 		str := fmt.Sprintf("test%d", i)
 		f := 1.1
+		c := customType2
 		return testStruct{
 			Int:            i * 2,
 			PtrInt:         &i,
+			CustomType:     customType1,
+			PtrCustomType:  &c,
 			Time:           now,
 			PtrTime:        &now,
 			Float:          f,
@@ -1552,22 +1553,22 @@ func setZero_OnBuilderWithBluePrint(t *testing.T) {
 	}{
 		{
 			desc:              "set many zero values",
-			setZeroFields:     []string{"Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct"},
+			setZeroFields:     []string{"Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct", "CustomType", "PtrCustomType"},
 			wantZeroFields:    []string{"Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct", "privateField", "CustomType", "PtrCustomType"},
-			wantNonZeroFields: testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct"),
+			wantNonZeroFields: testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct", "CustomType", "PtrCustomType"),
 			wantErr:           nil,
 		},
 		{
 			desc:              "set one zero value",
 			setZeroFields:     []string{"Int"},
-			wantZeroFields:    []string{"Int", "privateField", "CustomType", "PtrCustomType"},
+			wantZeroFields:    []string{"Int", "privateField"},
 			wantNonZeroFields: testutils.FilterFields(testStruct{}, "Int"),
 			wantErr:           nil,
 		},
 		{
 			desc:              "set no zero value",
 			setZeroFields:     []string{},
-			wantZeroFields:    []string{"privateField", "CustomType", "PtrCustomType"},
+			wantZeroFields:    []string{"privateField"},
 			wantNonZeroFields: testutils.FilterFields(testStruct{}),
 			wantErr:           nil,
 		},
@@ -1699,9 +1700,12 @@ func setZero_OnBuilderListWithBluePrint(t *testing.T) {
 	blueprint := func(i int) testStruct {
 		str := fmt.Sprintf("test%d", i)
 		f := 1.1
+		c := customType2
 		return testStruct{
 			Int:            i * 2,
 			PtrInt:         &i,
+			CustomType:     c,
+			PtrCustomType:  &c,
 			Time:           now,
 			PtrTime:        &now,
 			Float:          f,
@@ -1729,14 +1733,14 @@ func setZero_OnBuilderListWithBluePrint(t *testing.T) {
 		{
 			desc:          "set zero values at valid index",
 			index:         1,
-			setZeroFields: []string{"Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct"},
+			setZeroFields: []string{"Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct", "CustomType", "PtrCustomType"},
 			wantZeroFields: [][]string{
-				{"privateField", "CustomType", "PtrCustomType"},
+				{"privateField"},
 				{"Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct", "privateField", "CustomType", "PtrCustomType"},
 			},
 			wantNonZeroFields: [][]string{
-				{"Int", "PtrInt", "Str", "PtrStr", "Bool", "PtrBool", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct"},
-				testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct"),
+				{"Int", "PtrInt", "Str", "PtrStr", "Bool", "PtrBool", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct", "CustomType", "PtrCustomType"},
+				testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct", "CustomType", "PtrCustomType"),
 			},
 			wantErr: nil,
 		},
