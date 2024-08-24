@@ -2082,3 +2082,28 @@ func setZero_OnBuilderListMany(t *testing.T) {
 		})
 	}
 }
+
+func TestReset(t *testing.T) {
+	// TODO: should test associations
+	for _, fn := range map[string]func(*testing.T){
+		"when reset, index should be 0": reset_Index,
+	} {
+		t.Run(testutils.GetFunName(fn), func(t *testing.T) {
+			fn(t)
+		})
+	}
+}
+
+func reset_Index(t *testing.T) {
+	f := New(testStruct{})
+
+	_, err := f.BuildList(mockCTX, 5).Get()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	f.Reset()
+	if f.index != 1 {
+		t.Fatalf("index should be 1")
+	}
+}
