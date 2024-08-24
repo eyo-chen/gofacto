@@ -1,3 +1,5 @@
+[![Go Reference](https://pkg.go.dev/badge/github.com/eyo-chen/gofacto.svg)](https://pkg.go.dev/github.com/eyo-chen/gofacto)
+
 # gofacto
 
 gofacto is a strongly-typed and user-friendly factory library for Go, designed to simplify the creation of mock data. It offers:
