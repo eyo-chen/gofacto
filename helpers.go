@@ -44,11 +44,6 @@ func (f *Factory[T]) setNonZeroValues(v interface{}, ignoreFields []string) {
 			}
 		}
 
-		// skip client-defined types
-		if curField.Type.PkgPath() != "" {
-			continue
-		}
-
 		// handle time.Time
 		if curField.Type == reflect.TypeOf(time.Time{}) {
 			curVal.Set(reflect.ValueOf(time.Now()))
@@ -87,6 +82,17 @@ func (f *Factory[T]) setNonZeroValues(v interface{}, ignoreFields []string) {
 			newInstance := reflect.New(curField.Type.Elem()).Elem()
 			f.setNonZeroSlice(newInstance.Addr().Interface(), ignoreFields)
 			curVal.Set(newInstance.Addr())
+			continue
+		}
+
+		// skip client-defined types
+		if curField.Type.PkgPath() != "" {
+			continue
+		}
+
+		// skip pointer to custom type
+		if curField.Type.Kind() == reflect.Ptr &&
+			curField.Type.Elem().PkgPath() != "" {
 			continue
 		}
 
