@@ -15,9 +15,18 @@ var (
 	mockCTX = context.Background()
 )
 
+type customType string
+
+const (
+	customType1 customType = "customType1"
+	customType2 customType = "customType2"
+)
+
 type testStruct struct {
 	Int            int
 	PtrInt         *int
+	CustomType     customType
+	PtrCustomType  *customType
 	Str            string
 	PtrStr         *string
 	Bool           bool
@@ -61,9 +70,12 @@ func build_BluePrintAllFields(t *testing.T) {
 		str := fmt.Sprintf("test%d", i)
 		b := true
 		f := 1.1
+		c := customType2
 		return testStruct{
 			Int:            i * 2,
 			PtrInt:         &i,
+			CustomType:     customType1,
+			PtrCustomType:  &c,
 			Str:            str,
 			PtrStr:         &str,
 			Bool:           b,
@@ -95,10 +107,13 @@ func build_BluePrintAllFields(t *testing.T) {
 				str := "test1"
 				b := true
 				f := 1.1
+				c := customType2
 
 				return testStruct{
 					Int:            i2,
 					PtrInt:         &i1,
+					CustomType:     customType1,
+					PtrCustomType:  &c,
 					Str:            str,
 					PtrStr:         &str,
 					Bool:           b,
@@ -124,10 +139,13 @@ func build_BluePrintAllFields(t *testing.T) {
 				str := "test2"
 				b := true
 				f := 1.1
+				c := customType2
 
 				return testStruct{
 					Int:            i4,
 					PtrInt:         &i2,
+					CustomType:     customType1,
+					PtrCustomType:  &c,
 					Str:            str,
 					PtrStr:         &str,
 					Bool:           true,
@@ -156,7 +174,7 @@ func build_BluePrintAllFields(t *testing.T) {
 			}
 
 			if err := testutils.CompareVal(got, tt.want()); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -216,11 +234,11 @@ func build_BluePrintSomeFields(t *testing.T) {
 			}
 
 			if err := testutils.CompareVal(got, tt.want(), testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Bool", "PtrBool")...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 
 			if err := testutils.IsNotZeroVal(got, testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Bool", "PtrBool")...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -280,7 +298,7 @@ func build_BluePrintNotSetZeroValues(t *testing.T) {
 			}
 
 			if err := testutils.CompareVal(got, tt.want()); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -308,8 +326,8 @@ func build_NoBluePrint(t *testing.T) {
 				t.Fatalf("unexpected error %v", err)
 			}
 
-			if err := testutils.IsNotZeroVal(got, testutils.FilterFields(testStruct{})...); err != nil {
-				t.Fatalf(err.Error())
+			if err := testutils.IsNotZeroVal(got, "CustomType", "PtrCustomType", "Interface", "privateField"); err != nil {
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -320,15 +338,15 @@ func build_NoBluePrintNotSetZeroValues(t *testing.T) {
 
 	tests := []struct {
 		desc string
-		want func() testStruct
+		want testStruct
 	}{
 		{
 			desc: "first build",
-			want: func() testStruct { return testStruct{} },
+			want: testStruct{},
 		},
 		{
 			desc: "second build",
-			want: func() testStruct { return testStruct{} },
+			want: testStruct{},
 		},
 	}
 
@@ -339,8 +357,8 @@ func build_NoBluePrintNotSetZeroValues(t *testing.T) {
 				t.Fatalf("unexpected error %v", err)
 			}
 
-			if err := testutils.CompareVal(got, tt.want()); err != nil {
-				t.Fatalf(err.Error())
+			if err := testutils.CompareVal(got, tt.want); err != nil {
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -394,11 +412,11 @@ func build_IgnoreFields(t *testing.T) {
 			}
 
 			if err := testutils.IsZeroVal(got, tt.wantNonZeroFields...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 
 			if err := testutils.IsNotZeroVal(got, tt.wantZeroFields...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -425,9 +443,12 @@ func buildList_BluePrintAllFields(t *testing.T) {
 		str := fmt.Sprintf("test%d", i)
 		b := true
 		f := 1.1
+		c := customType2
 		return testStruct{
 			Int:            i * 2,
 			PtrInt:         &i,
+			CustomType:     c,
+			PtrCustomType:  &c,
 			Str:            str,
 			PtrStr:         &str,
 			Bool:           b,
@@ -458,11 +479,14 @@ func buildList_BluePrintAllFields(t *testing.T) {
 				str1, str2 := "test1", "test2"
 				b := true
 				f := 1.1
+				c := customType2
 
 				return []testStruct{
 					{
 						Int:            i2,
 						PtrInt:         &i1,
+						CustomType:     c,
+						PtrCustomType:  &c,
 						Str:            str1,
 						PtrStr:         &str1,
 						Bool:           b,
@@ -482,6 +506,8 @@ func buildList_BluePrintAllFields(t *testing.T) {
 					{
 						Int:            i4,
 						PtrInt:         &i2,
+						CustomType:     c,
+						PtrCustomType:  &c,
 						Str:            str2,
 						PtrStr:         &str2,
 						Bool:           b,
@@ -508,11 +534,14 @@ func buildList_BluePrintAllFields(t *testing.T) {
 				str3, str4 := "test3", "test4"
 				b := true
 				f := 1.1
+				c := customType2
 
 				return []testStruct{
 					{
 						Int:            i6,
 						PtrInt:         &i3,
+						CustomType:     c,
+						PtrCustomType:  &c,
 						Str:            str3,
 						PtrStr:         &str3,
 						Bool:           b,
@@ -532,6 +561,8 @@ func buildList_BluePrintAllFields(t *testing.T) {
 					{
 						Int:            i8,
 						PtrInt:         &i4,
+						CustomType:     c,
+						PtrCustomType:  &c,
 						Str:            str4,
 						PtrStr:         &str4,
 						Bool:           b,
@@ -561,7 +592,7 @@ func buildList_BluePrintAllFields(t *testing.T) {
 			}
 
 			if err := testutils.CompareVal(got, tt.want()); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -632,11 +663,11 @@ func buildList_BluePrintSomeFields(t *testing.T) {
 			}
 
 			if err := testutils.CompareVal(got, tt.want(), testutils.FilterFields(testStruct{}, "Int", "PtrStruct", "SlicePtrStruct")...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 
 			if err := testutils.IsNotZeroVal(got, testutils.FilterFields(testStruct{}, "Int", "PtrStruct", "SlicePtrStruct")...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -707,54 +738,26 @@ func buildList_BluePrintNotSetZeroValues(t *testing.T) {
 			}
 
 			if err := testutils.CompareVal(got, tt.want()); err != nil {
-				t.Fatalf(err.Error())
-			}
-		})
-	}
-}
-
-func buildList_NoBluePrintNotSetZeroValues(t *testing.T) {
-	f := New(testStruct{})
-
-	tests := []struct {
-		desc string
-	}{
-		{
-			desc: "first build",
-		},
-		{
-			desc: "second build",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.desc, func(t *testing.T) {
-			got, err := f.BuildList(mockCTX, 2).Get()
-			if err != nil {
-				t.Fatalf("unexpected error %v", err)
-			}
-
-			if err := testutils.IsNotZeroVal(got, testutils.FilterFields(testStruct{})...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
 }
 
 func buildList_NoBluePrint(t *testing.T) {
-	f := New(testStruct{}).WithIsSetZeroValue(false)
+	f := New(testStruct{})
 
 	tests := []struct {
 		desc string
-		want func() []testStruct
+		want []testStruct
 	}{
 		{
 			desc: "first build",
-			want: func() []testStruct { return []testStruct{{}, {}} },
+			want: []testStruct{{}, {}},
 		},
 		{
 			desc: "second build",
-			want: func() []testStruct { return []testStruct{{}, {}} },
+			want: []testStruct{{}, {}},
 		},
 	}
 
@@ -765,8 +768,39 @@ func buildList_NoBluePrint(t *testing.T) {
 				t.Fatalf("unexpected error %v", err)
 			}
 
-			if err := testutils.CompareVal(got, tt.want()); err != nil {
-				t.Fatalf(err.Error())
+			if err := testutils.IsNotZeroVal(got, "CustomType", "PtrCustomType", "Interface", "privateField"); err != nil {
+				t.Fatal(err.Error())
+			}
+		})
+	}
+}
+
+func buildList_NoBluePrintNotSetZeroValues(t *testing.T) {
+	f := New(testStruct{}).WithIsSetZeroValue(false)
+
+	tests := []struct {
+		desc string
+		want []testStruct
+	}{
+		{
+			desc: "first build",
+			want: []testStruct{{}, {}},
+		},
+		{
+			desc: "second build",
+			want: []testStruct{{}, {}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			got, err := f.BuildList(mockCTX, 2).Get()
+			if err != nil {
+				t.Fatalf("unexpected error %v", err)
+			}
+
+			if err := testutils.CompareVal(got, tt.want); err != nil {
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -802,12 +836,12 @@ func buildList_IgnoreFields(t *testing.T) {
 		{
 			desc:              "first build",
 			wantZeroFields:    []string{"Int", "PtrInt", "Str", "PtrStr", "Interface", "privateField"},
-			wantNonZeroFields: testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Str", "PtrStr", "Interface"),
+			wantNonZeroFields: testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Str", "PtrStr", "Interface", "privateField"),
 		},
 		{
 			desc:              "second build",
 			wantZeroFields:    []string{"Int", "PtrInt", "Str", "PtrStr", "Interface", "privateField"},
-			wantNonZeroFields: testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Str", "PtrStr", "Interface"),
+			wantNonZeroFields: testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Str", "PtrStr", "Interface", "privateField"),
 		},
 	}
 
@@ -819,11 +853,11 @@ func buildList_IgnoreFields(t *testing.T) {
 			}
 
 			if err := testutils.IsZeroVal(got, tt.wantNonZeroFields...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 
 			if err := testutils.IsNotZeroVal(got, tt.wantZeroFields...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -944,7 +978,7 @@ func overwrite_OnBuilder(t *testing.T) {
 			}
 
 			if err := testutils.CompareVal(got, tt.want, testutils.FilterFields(testStruct{}, "Int", "PtrStruct", "SlicePtrStruct")...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -1008,7 +1042,7 @@ func overwrite_OnBuilderList(t *testing.T) {
 			}
 
 			if err := testutils.CompareVal(got, tt.want, testutils.FilterFields(testStruct{}, "Int", "PtrStruct", "SlicePtrStruct")...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -1114,7 +1148,7 @@ func overwrites_OnBuilderList(t *testing.T) {
 			}
 
 			if err := testutils.CompareVal(got, tt.want, testutils.FilterFields(testStruct{}, "Int", "PtrStruct", "SlicePtrStruct")...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -1185,14 +1219,14 @@ func withTrait_OnBuilder(t *testing.T) {
 				}
 
 				if err := testutils.CompareVal(got, tt.want()); err != nil {
-					t.Fatalf(err.Error())
+					t.Fatal(err.Error())
 				}
 
 				return
 			}
 
 			if err := testutils.CompareVal(got, tt.want(), testutils.FilterFields(testStruct{}, "PtrStr", "Time", "Slice")...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -1257,7 +1291,7 @@ func withTrait_OnBuilderList(t *testing.T) {
 				}
 
 				if err := testutils.CompareVal(got, tt.want()); err != nil {
-					t.Fatalf(err.Error())
+					t.Fatal(err.Error())
 				}
 
 				return
@@ -1268,7 +1302,7 @@ func withTrait_OnBuilderList(t *testing.T) {
 			}
 
 			if err := testutils.CompareVal(got, tt.want(), testutils.FilterFields(testStruct{}, "PtrStr", "Time", "Slice")...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -1335,7 +1369,7 @@ func withTrait_OnBuilderMultiple(t *testing.T) {
 				}
 
 				if err := testutils.CompareVal(got, tt.want()); err != nil {
-					t.Fatalf(err.Error())
+					t.Fatal(err.Error())
 				}
 
 				return
@@ -1346,7 +1380,7 @@ func withTrait_OnBuilderMultiple(t *testing.T) {
 			}
 
 			if err := testutils.CompareVal(got, tt.want(), testutils.FilterFields(testStruct{}, "PtrStr", "Time", "Slice")...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -1452,7 +1486,7 @@ func withTraits_OnBuilderList(t *testing.T) {
 				}
 
 				if err := testutils.CompareVal(got, tt.want()); err != nil {
-					t.Fatalf(err.Error())
+					t.Fatal(err.Error())
 				}
 
 				return
@@ -1463,7 +1497,7 @@ func withTraits_OnBuilderList(t *testing.T) {
 			}
 
 			if err := testutils.CompareVal(got, tt.want(), testutils.FilterFields(testStruct{}, "PtrStr", "Time", "Slice")...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -1488,9 +1522,12 @@ func setZero_OnBuilderWithBluePrint(t *testing.T) {
 	blueprint := func(i int) testStruct {
 		str := fmt.Sprintf("test%d", i)
 		f := 1.1
+		c := customType2
 		return testStruct{
 			Int:            i * 2,
 			PtrInt:         &i,
+			CustomType:     customType1,
+			PtrCustomType:  &c,
 			Time:           now,
 			PtrTime:        &now,
 			Float:          f,
@@ -1516,9 +1553,9 @@ func setZero_OnBuilderWithBluePrint(t *testing.T) {
 	}{
 		{
 			desc:              "set many zero values",
-			setZeroFields:     []string{"Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct"},
-			wantZeroFields:    []string{"Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct", "privateField"},
-			wantNonZeroFields: testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct"),
+			setZeroFields:     []string{"Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct", "CustomType", "PtrCustomType"},
+			wantZeroFields:    []string{"Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct", "privateField", "CustomType", "PtrCustomType"},
+			wantNonZeroFields: testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct", "CustomType", "PtrCustomType"),
 			wantErr:           nil,
 		},
 		{
@@ -1559,7 +1596,7 @@ func setZero_OnBuilderWithBluePrint(t *testing.T) {
 				}
 
 				if err := testutils.CompareVal(got, tt.want); err != nil {
-					t.Fatalf(err.Error())
+					t.Fatal(err.Error())
 				}
 
 				return
@@ -1570,11 +1607,11 @@ func setZero_OnBuilderWithBluePrint(t *testing.T) {
 			}
 
 			if err := testutils.IsZeroVal(got, tt.wantNonZeroFields...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 
 			if err := testutils.IsNotZeroVal(got, tt.wantZeroFields...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -1594,7 +1631,7 @@ func setZero_OnBuilderWithoutBluePrint(t *testing.T) {
 		{
 			desc:              "set many zero values",
 			setZeroFields:     []string{"Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct"},
-			wantZeroFields:    []string{"Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct", "privateField"},
+			wantZeroFields:    []string{"Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct", "privateField", "CustomType", "PtrCustomType"},
 			wantNonZeroFields: testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct"),
 			wantErr:           nil,
 		},
@@ -1602,7 +1639,7 @@ func setZero_OnBuilderWithoutBluePrint(t *testing.T) {
 			desc:          "set one zero value",
 			setZeroFields: []string{"Int"},
 			// interface value will default set to nil
-			wantZeroFields:    []string{"Int", "Interface", "privateField"},
+			wantZeroFields:    []string{"Int", "Interface", "privateField", "CustomType", "PtrCustomType"},
 			wantNonZeroFields: testutils.FilterFields(testStruct{}, "Int", "Interface"),
 			wantErr:           nil,
 		},
@@ -1610,7 +1647,7 @@ func setZero_OnBuilderWithoutBluePrint(t *testing.T) {
 			desc:          "set no zero value",
 			setZeroFields: []string{},
 			// interface value will default set to nil
-			wantZeroFields:    []string{"Interface", "privateField"},
+			wantZeroFields:    []string{"Interface", "privateField", "CustomType", "PtrCustomType"},
 			wantNonZeroFields: testutils.FilterFields(testStruct{}),
 			wantErr:           nil,
 		},
@@ -1638,7 +1675,7 @@ func setZero_OnBuilderWithoutBluePrint(t *testing.T) {
 				}
 
 				if err := testutils.CompareVal(got, tt.want); err != nil {
-					t.Fatalf(err.Error())
+					t.Fatal(err.Error())
 				}
 
 				return
@@ -1649,11 +1686,11 @@ func setZero_OnBuilderWithoutBluePrint(t *testing.T) {
 			}
 
 			if err := testutils.IsZeroVal(got, tt.wantNonZeroFields...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 
 			if err := testutils.IsNotZeroVal(got, tt.wantZeroFields...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -1663,9 +1700,12 @@ func setZero_OnBuilderListWithBluePrint(t *testing.T) {
 	blueprint := func(i int) testStruct {
 		str := fmt.Sprintf("test%d", i)
 		f := 1.1
+		c := customType2
 		return testStruct{
 			Int:            i * 2,
 			PtrInt:         &i,
+			CustomType:     c,
+			PtrCustomType:  &c,
 			Time:           now,
 			PtrTime:        &now,
 			Float:          f,
@@ -1693,14 +1733,14 @@ func setZero_OnBuilderListWithBluePrint(t *testing.T) {
 		{
 			desc:          "set zero values at valid index",
 			index:         1,
-			setZeroFields: []string{"Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct"},
+			setZeroFields: []string{"Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct", "CustomType", "PtrCustomType"},
 			wantZeroFields: [][]string{
 				{"privateField"},
-				{"Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct", "privateField"},
+				{"Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct", "privateField", "CustomType", "PtrCustomType"},
 			},
 			wantNonZeroFields: [][]string{
-				{"Int", "PtrInt", "Str", "PtrStr", "Bool", "PtrBool", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct"},
-				testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct"),
+				{"Int", "PtrInt", "Str", "PtrStr", "Bool", "PtrBool", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct", "CustomType", "PtrCustomType"},
+				testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct", "CustomType", "PtrCustomType"),
 			},
 			wantErr: nil,
 		},
@@ -1742,7 +1782,7 @@ func setZero_OnBuilderListWithBluePrint(t *testing.T) {
 				}
 
 				if err := testutils.CompareVal(got, tt.want); err != nil {
-					t.Fatalf(err.Error())
+					t.Fatal(err.Error())
 				}
 
 				return
@@ -1754,11 +1794,11 @@ func setZero_OnBuilderListWithBluePrint(t *testing.T) {
 
 			for i, g := range got {
 				if err := testutils.IsZeroVal(g, tt.wantNonZeroFields[i]...); err != nil {
-					t.Fatalf(err.Error())
+					t.Fatal(err.Error())
 				}
 
 				if err := testutils.IsNotZeroVal(g, tt.wantZeroFields[i]...); err != nil {
-					t.Fatalf(err.Error())
+					t.Fatal(err.Error())
 				}
 			}
 		})
@@ -1782,8 +1822,8 @@ func setZero_OnBuilderListWithoutBluePrint(t *testing.T) {
 			index:         1,
 			setZeroFields: []string{"Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct"},
 			wantZeroFields: [][]string{
-				{"Interface", "privateField"},
-				{"Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Struct", "PtrStruct", "Interface", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct", "privateField"},
+				{"Interface", "privateField", "CustomType", "PtrCustomType"},
+				{"Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Struct", "PtrStruct", "Interface", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct", "privateField", "CustomType", "PtrCustomType"},
 			},
 			wantNonZeroFields: [][]string{
 				testutils.FilterFields(testStruct{}, "Interface"),
@@ -1829,7 +1869,7 @@ func setZero_OnBuilderListWithoutBluePrint(t *testing.T) {
 				}
 
 				if err := testutils.CompareVal(got, tt.want); err != nil {
-					t.Fatalf(err.Error())
+					t.Fatal(err.Error())
 				}
 
 				return
@@ -1841,11 +1881,11 @@ func setZero_OnBuilderListWithoutBluePrint(t *testing.T) {
 
 			for i, g := range got {
 				if err := testutils.IsZeroVal(g, tt.wantNonZeroFields[i]...); err != nil {
-					t.Fatalf(err.Error())
+					t.Fatal(err.Error())
 				}
 
 				if err := testutils.IsNotZeroVal(g, tt.wantZeroFields[i]...); err != nil {
-					t.Fatalf(err.Error())
+					t.Fatal(err.Error())
 				}
 			}
 		})
@@ -1869,7 +1909,7 @@ func setZero_OnBuilderMany(t *testing.T) {
 				{"Int"},
 				{"Slice"},
 			},
-			wantZeroFields:    []string{"Int", "Slice", "Interface", "privateField"},
+			wantZeroFields:    []string{"Int", "Slice", "Interface", "privateField", "CustomType", "PtrCustomType"},
 			wantNonZeroFields: testutils.FilterFields(testStruct{}, "Int", "Slice", "Interface"),
 			wantErr:           nil,
 		},
@@ -1880,7 +1920,7 @@ func setZero_OnBuilderMany(t *testing.T) {
 				{"Slice"},
 				{"Struct"},
 			},
-			wantZeroFields:    []string{"Int", "Slice", "Struct", "Interface", "privateField"},
+			wantZeroFields:    []string{"Int", "Slice", "Struct", "Interface", "privateField", "CustomType", "PtrCustomType"},
 			wantNonZeroFields: testutils.FilterFields(testStruct{}, "Int", "Slice", "Struct", "Interface"),
 			wantErr:           nil,
 		},
@@ -1913,7 +1953,7 @@ func setZero_OnBuilderMany(t *testing.T) {
 				}
 
 				if err := testutils.CompareVal(got, tt.want); err != nil {
-					t.Fatalf(err.Error())
+					t.Fatal(err.Error())
 				}
 
 				return
@@ -1924,11 +1964,11 @@ func setZero_OnBuilderMany(t *testing.T) {
 			}
 
 			if err := testutils.IsZeroVal(got, tt.wantNonZeroFields...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 
 			if err := testutils.IsNotZeroVal(got, tt.wantZeroFields...); err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 		})
 	}
@@ -1954,9 +1994,9 @@ func setZero_OnBuilderListMany(t *testing.T) {
 				1: {"PtrSlice", "SlicePtrStruct"},
 			},
 			wantZeroFields: [][]string{
-				{"Int", "Interface", "privateField", "privateField"},
-				{"PtrSlice", "SlicePtrStruct", "Interface", "privateField", "privateField"},
-				{"Interface", "privateField", "privateField"},
+				{"Int", "Interface", "privateField", "privateField", "CustomType", "PtrCustomType"},
+				{"PtrSlice", "SlicePtrStruct", "Interface", "privateField", "privateField", "CustomType", "PtrCustomType"},
+				{"Interface", "privateField", "privateField", "CustomType", "PtrCustomType"},
 			},
 			wantNonZeroFields: [][]string{
 				testutils.FilterFields(testStruct{}, "Int", "Interface"),
@@ -2020,7 +2060,7 @@ func setZero_OnBuilderListMany(t *testing.T) {
 				}
 
 				if err := testutils.CompareVal(got, tt.want); err != nil {
-					t.Fatalf(err.Error())
+					t.Fatal(err.Error())
 				}
 
 				return
@@ -2032,11 +2072,11 @@ func setZero_OnBuilderListMany(t *testing.T) {
 
 			for i, g := range got {
 				if err := testutils.IsZeroVal(g, tt.wantNonZeroFields[i]...); err != nil {
-					t.Fatalf(err.Error())
+					t.Fatal(err.Error())
 				}
 
 				if err := testutils.IsNotZeroVal(g, tt.wantZeroFields[i]...); err != nil {
-					t.Fatalf(err.Error())
+					t.Fatal(err.Error())
 				}
 			}
 		})

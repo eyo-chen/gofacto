@@ -85,6 +85,17 @@ func (f *Factory[T]) setNonZeroValues(v interface{}, ignoreFields []string) {
 			continue
 		}
 
+		// skip client-defined types
+		if curField.Type.PkgPath() != "" {
+			continue
+		}
+
+		// skip pointer to custom type
+		if curField.Type.Kind() == reflect.Ptr &&
+			curField.Type.Elem().PkgPath() != "" {
+			continue
+		}
+
 		// For other types, set non-zero values if the field is zero
 		if v := genNonZeroValue(curField.Type, f.index); v != nil {
 			curVal.Set(reflect.ValueOf(v))
