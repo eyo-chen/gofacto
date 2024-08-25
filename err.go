@@ -30,7 +30,7 @@ var (
 	errValueNotTheSameType = errors.New("value is not the same type")
 
 	// errTagFormat is the error representing that tag is in wrong format
-	errTagFormat = errors.New("tag is in wrong format. It should be gofacto:\"struct:<structName>,table:<TableName>,foreignField:<ForeignField>\"")
+	errTagFormat = errors.New("tag is in wrong format")
 
 	// errNotFoundAtTag is the error representing that not found at tag
 	errNotFoundAtTag = errors.New("not found at tag")

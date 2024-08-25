@@ -36,7 +36,7 @@ func (f *Factory[T]) setNonZeroValues(v interface{}, ignoreFields []string) {
 			continue
 		}
 
-		// handle custom types
+		// handle db custom types
 		if f.db != nil {
 			if customValue, ok := f.db.GenCustomType(curField.Type); ok {
 				curVal.Set(reflect.ValueOf(customValue))
