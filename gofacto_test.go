@@ -1050,6 +1050,7 @@ func TestOverwrite(t *testing.T) {
 		"when overwrite on builder, overwrite one value":           overwrite_OnBuilder,
 		"when overwrite on builder list, overwrite one value":      overwrite_OnBuilderList,
 		"when overwrites on builder list, overwrite target values": overwrites_OnBuilderList,
+		"when overwrite, already has error, return error":          overwrite_AlreadyHasError,
 	} {
 		t.Run(testutils.GetFunName(fn), func(t *testing.T) {
 			fn(t)
@@ -1271,6 +1272,55 @@ func overwrites_OnBuilderList(t *testing.T) {
 			}
 
 			if err := testutils.CompareVal(got, tt.want, testutils.FilterFields(testStruct{}, "Int", "PtrStruct", "SlicePtrStruct")...); err != nil {
+				t.Fatal(err.Error())
+			}
+		})
+	}
+}
+
+func overwrite_AlreadyHasError(t *testing.T) {
+	f := New(testStruct{})
+
+	tests := []struct {
+		desc    string
+		gotRes  func() (interface{}, error)
+		want    interface{}
+		wantErr error
+	}{
+		{
+			desc: "already has error when overwrite on builder",
+			gotRes: func() (interface{}, error) {
+				return f.Build(mockCTX).SetZero("incorrect field").Overwrite(testStruct{}).Get()
+			},
+			want:    testStruct{},
+			wantErr: errFieldNotFound,
+		},
+		{
+			desc: "already has error when overwrites on builder list",
+			gotRes: func() (interface{}, error) {
+				return f.BuildList(mockCTX, 2).SetZero(0, "incorrect field").Overwrites(testStruct{}).Get()
+			},
+			want:    []testStruct{},
+			wantErr: errFieldNotFound,
+		},
+		{
+			desc: "already has error when overwrite on builder list",
+			gotRes: func() (interface{}, error) {
+				return f.BuildList(mockCTX, 2).SetZero(0, "incorrect field").Overwrite(testStruct{}).Get()
+			},
+			want:    []testStruct{},
+			wantErr: errFieldNotFound,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			got, err := tt.gotRes()
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("error should be %v", tt.wantErr)
+			}
+
+			if err := testutils.CompareVal(got, tt.want); err != nil {
 				t.Fatal(err.Error())
 			}
 		})
