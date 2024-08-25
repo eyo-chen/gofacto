@@ -2334,9 +2334,9 @@ func withMany_WithErr(t *testing.T) {
 }
 
 func TestReset(t *testing.T) {
-	// TODO: should test associations
 	for _, fn := range map[string]func(*testing.T){
-		"when reset, index should be 0": reset_Index,
+		"when reset, index should be 0":            reset_Index,
+		"when reset, associations should be empty": reset_Associations,
 	} {
 		t.Run(testutils.GetFunName(fn), func(t *testing.T) {
 			fn(t)
@@ -2355,6 +2355,18 @@ func reset_Index(t *testing.T) {
 	f.Reset()
 	if f.index != 1 {
 		t.Fatalf("index should be 1")
+	}
+}
+
+func reset_Associations(t *testing.T) {
+	f := New(testAssocStruct{}).WithDB(&mockDB{})
+
+	// explicitly set association and not insert to make the association not empty
+	f.Build(mockCTX).WithOne(&testStructWithID{})
+
+	f.Reset()
+	if len(f.associations) != 0 {
+		t.Fatalf("associations should be empty")
 	}
 }
 
