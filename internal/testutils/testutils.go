@@ -86,7 +86,6 @@ func CompareVal(val1, val2 interface{}, ignoreFields ...string) error {
 
 	// check non-struct values(like int, string, slice, etc.)
 	if !reflect.DeepEqual(val1, val2) {
-		fmt.Println("error", val1, val2)
 		return fmt.Errorf("values are different, the first one is %v, the second one is %v", val1, val2)
 	}
 
