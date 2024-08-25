@@ -2208,10 +2208,16 @@ func setZero_OnBuilderListMany(t *testing.T) {
 
 func TestWithOne(t *testing.T) {
 	for _, fn := range map[string]func(*testing.T){
-		"when withOne on builder, insert successfully":        withOne_OnBuilder,
-		"when withOne on builder with err, return error":      withOne_OnBuilderWithErr,
-		"when withOne on builder list, insert successfully":   withOne_OnBuilderList,
-		"when withOne on builder list with err, return error": withOne_OnBuilderListWithErr,
+		"when withOne on builder, insert successfully":                      withOne_OnBuilder,
+		"when withOne on builder not pass ptr, return error":                withOne_OnBuilderNotPassPtr,
+		"when withOne on builder not pass struct, return error":             withOne_OnBuilderNotPassStruct,
+		"when withOne on builder not pass struct in tag, return error":      withOne_OnBuilderNotPassStructInTag,
+		"when withOne on builder with err, return error":                    withOne_OnBuilderWithErr,
+		"when withOne on builder list, insert successfully":                 withOne_OnBuilderList,
+		"when withOne on builder list not pass ptr, return error":           withOne_OnBuilderListNotPassPtr,
+		"when withOne on builder list not pass struct, return error":        withOne_OnBuilderListNotPassStruct,
+		"when withOne on builder list not pass struct in tag, return error": withOne_OnBuilderListNotPassStructInTag,
+		"when withOne on builder list with err, return error":               withOne_OnBuilderListWithErr,
 	} {
 		t.Run(testutils.GetFunName(fn), func(t *testing.T) {
 			fn(t)
@@ -2230,6 +2236,55 @@ func withOne_OnBuilder(t *testing.T) {
 
 	if val.ForeignKey != assVal.ID {
 		t.Fatalf("ForeignKey should be %v", assVal.ID)
+	}
+}
+
+func withOne_OnBuilderNotPassPtr(t *testing.T) {
+	f := New(testAssocStruct{}).WithDB(&mockDB{})
+
+	want := testAssocStruct{}
+	wantErr := errIsNotPtr
+
+	val, err := f.Build(mockCTX).WithOne(testStructWithID{}).Insert()
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("error should be %v", wantErr)
+	}
+
+	if err := testutils.CompareVal(val, want); err != nil {
+		t.Fatal(err.Error())
+	}
+}
+
+func withOne_OnBuilderNotPassStruct(t *testing.T) {
+	f := New(testAssocStruct{}).WithDB(&mockDB{})
+
+	want := testAssocStruct{}
+	wantErr := errIsNotStructPtr
+
+	assVal := "not struct type"
+	val, err := f.Build(mockCTX).WithOne(&assVal).Insert()
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("error should be %v", wantErr)
+	}
+
+	if err := testutils.CompareVal(val, want); err != nil {
+		t.Fatal(err.Error())
+	}
+}
+
+func withOne_OnBuilderNotPassStructInTag(t *testing.T) {
+	f := New(testAssocStruct{}).WithDB(&mockDB{})
+
+	want := testAssocStruct{}
+	wantErr := errNotFoundAtTag
+
+	val, err := f.Build(mockCTX).WithOne(&testStruct{}).Insert()
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("error should be %v", wantErr)
+	}
+
+	if err := testutils.CompareVal(val, want); err != nil {
+		t.Fatal(err.Error())
 	}
 }
 
@@ -2268,6 +2323,55 @@ func withOne_OnBuilderList(t *testing.T) {
 	}
 }
 
+func withOne_OnBuilderListNotPassPtr(t *testing.T) {
+	f := New(testAssocStruct{}).WithDB(&mockDB{})
+
+	want := []testAssocStruct{}
+	wantErr := errIsNotPtr
+
+	vals, err := f.BuildList(mockCTX, 2).WithOne(testStructWithID{}).Insert()
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("error should be %v", wantErr)
+	}
+
+	if err := testutils.CompareVal(vals, want); err != nil {
+		t.Fatal(err.Error())
+	}
+}
+
+func withOne_OnBuilderListNotPassStruct(t *testing.T) {
+	f := New(testAssocStruct{}).WithDB(&mockDB{})
+
+	want := []testAssocStruct{}
+	wantErr := errIsNotStructPtr
+
+	assVal := "not struct type"
+	vals, err := f.BuildList(mockCTX, 2).WithOne(&assVal).Insert()
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("error should be %v", wantErr)
+	}
+
+	if err := testutils.CompareVal(vals, want); err != nil {
+		t.Fatal(err.Error())
+	}
+}
+
+func withOne_OnBuilderListNotPassStructInTag(t *testing.T) {
+	f := New(testAssocStruct{}).WithDB(&mockDB{})
+
+	want := []testAssocStruct{}
+	wantErr := errNotFoundAtTag
+
+	vals, err := f.BuildList(mockCTX, 2).WithOne(&testStruct{}).Insert()
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("error should be %v", wantErr)
+	}
+
+	if err := testutils.CompareVal(vals, want); err != nil {
+		t.Fatal(err.Error())
+	}
+}
+
 func withOne_OnBuilderListWithErr(t *testing.T) {
 	f := New(testAssocStruct{}).WithDB(&mockDB{})
 
@@ -2287,8 +2391,11 @@ func withOne_OnBuilderListWithErr(t *testing.T) {
 
 func TestWithMany(t *testing.T) {
 	for _, fn := range map[string]func(*testing.T){
-		"when withMany on builder, insert successfully":   withMany_CorrectCase,
-		"when withMany on builder with err, return error": withMany_WithErr,
+		"when withMany on builder, insert successfully":                 withMany_CorrectCase,
+		"when withMany on builder not pass ptr, return error":           withMany_NotPassPtr,
+		"when withMany on builder not pass struct, return error":        withMany_NotPassStruct,
+		"when withMany on builder not pass struct in tag, return error": withMany_NotPassStructInTag,
+		"when withMany on builder with err, return error":               withMany_WithErr,
 	} {
 		t.Run(testutils.GetFunName(fn), func(t *testing.T) {
 			fn(t)
@@ -2312,6 +2419,55 @@ func withMany_CorrectCase(t *testing.T) {
 
 	if vals[1].ForeignKey != assVal2.ID {
 		t.Fatalf("ForeignKey should be %v", assVal2.ID)
+	}
+}
+
+func withMany_NotPassPtr(t *testing.T) {
+	f := New(testAssocStruct{}).WithDB(&mockDB{})
+
+	want := []testAssocStruct{}
+	wantErr := errIsNotPtr
+
+	vals, err := f.BuildList(mockCTX, 2).WithMany([]interface{}{testStructWithID{}, testStructWithID{}}).Insert()
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("error should be %v", wantErr)
+	}
+
+	if err := testutils.CompareVal(vals, want); err != nil {
+		t.Fatal(err.Error())
+	}
+}
+
+func withMany_NotPassStruct(t *testing.T) {
+	f := New(testAssocStruct{}).WithDB(&mockDB{})
+
+	want := []testAssocStruct{}
+	wantErr := errIsNotStructPtr
+
+	assVal := "not struct type"
+	vals, err := f.BuildList(mockCTX, 2).WithMany([]interface{}{&assVal, &assVal}).Insert()
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("error should be %v", wantErr)
+	}
+
+	if err := testutils.CompareVal(vals, want); err != nil {
+		t.Fatal(err.Error())
+	}
+}
+
+func withMany_NotPassStructInTag(t *testing.T) {
+	f := New(testAssocStruct{}).WithDB(&mockDB{})
+
+	want := []testAssocStruct{}
+	wantErr := errNotFoundAtTag
+
+	vals, err := f.BuildList(mockCTX, 2).WithMany([]interface{}{&testStruct{}, &testStruct{}}).Insert()
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("error should be %v", wantErr)
+	}
+
+	if err := testutils.CompareVal(vals, want); err != nil {
+		t.Fatal(err.Error())
 	}
 }
 
