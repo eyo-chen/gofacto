@@ -65,10 +65,20 @@ type testStructWithID struct {
 	ID int
 }
 
+// testStructWithID2 is a struct with an ID field to test the association functionality.
+// This is for testing foreign field with pointer struct.
+type testStructWithID2 struct {
+	ID   int
+	Name string
+}
+
 // testAssocStruct is a struct with a foreign key to test the association functionality.
 type testAssocStruct struct {
-	ID         int
-	ForeignKey int `gofacto:"foreignKey,struct:testStructWithID"`
+	ID            int
+	ForeignKey    int `gofacto:"foreignKey,struct:testStructWithID,field:ForeignValue"`
+	ForeignKey2   int `gofacto:"foreignKey,struct:testStructWithID2,field:ForeignValue2"`
+	ForeignValue  testStructWithID
+	ForeignValue2 *testStructWithID2
 }
 
 // customType is a custom type to test the custom type functionality.
@@ -2279,13 +2289,26 @@ func withOne_OnBuilder(t *testing.T) {
 	f := New(testAssocStruct{}).WithDB(&mockDB{})
 
 	assVal := testStructWithID{}
-	val, err := f.Build(mockCTX).WithOne(&assVal).Insert()
+	assVal2 := testStructWithID2{}
+	val, err := f.Build(mockCTX).WithOne(&assVal).WithOne(&assVal2).Insert()
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
 
 	if val.ForeignKey != assVal.ID {
 		t.Fatalf("ForeignKey should be %v", assVal.ID)
+	}
+
+	if val.ForeignKey2 != assVal.ID {
+		t.Fatalf("ForeignKey2 should be %v", assVal.ID)
+	}
+
+	if err := testutils.CompareVal(val.ForeignValue, assVal); err != nil {
+		t.Fatal(err.Error())
+	}
+
+	if err := testutils.CompareVal(val.ForeignValue2, &assVal2); err != nil {
+		t.Fatal(err.Error())
 	}
 }
 
@@ -2359,7 +2382,8 @@ func withOne_OnBuilderList(t *testing.T) {
 	f := New(testAssocStruct{}).WithDB(&mockDB{})
 
 	assVal := testStructWithID{}
-	vals, err := f.BuildList(mockCTX, 2).WithOne(&assVal).Insert()
+	assVal2 := testStructWithID2{}
+	vals, err := f.BuildList(mockCTX, 2).WithOne(&assVal).WithOne(&assVal2).Insert()
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
@@ -2368,8 +2392,32 @@ func withOne_OnBuilderList(t *testing.T) {
 		t.Fatalf("ForeignKey should be %v", assVal.ID)
 	}
 
+	if err := testutils.CompareVal(vals[0].ForeignValue, assVal); err != nil {
+		t.Fatal(err.Error())
+	}
+
 	if vals[1].ForeignKey != assVal.ID {
 		t.Fatalf("ForeignKey should be %v", assVal.ID)
+	}
+
+	if err := testutils.CompareVal(vals[1].ForeignValue, assVal); err != nil {
+		t.Fatal(err.Error())
+	}
+
+	if vals[0].ForeignKey2 != assVal2.ID {
+		t.Fatalf("ForeignKey2 should be %v", assVal2.ID)
+	}
+
+	if err := testutils.CompareVal(vals[0].ForeignValue2, &assVal2); err != nil {
+		t.Fatal(err.Error())
+	}
+
+	if vals[1].ForeignKey2 != assVal2.ID {
+		t.Fatalf("ForeignKey2 should be %v", assVal2.ID)
+	}
+
+	if err := testutils.CompareVal(vals[1].ForeignValue2, &assVal2); err != nil {
+		t.Fatal(err.Error())
 	}
 }
 
@@ -2458,7 +2506,9 @@ func withMany_CorrectCase(t *testing.T) {
 
 	assVal1 := testStructWithID{}
 	assVal2 := testStructWithID{}
-	vals, err := f.BuildList(mockCTX, 2).WithMany([]interface{}{&assVal1, &assVal2}).Insert()
+	assVal3 := testStructWithID2{}
+	assVal4 := testStructWithID2{}
+	vals, err := f.BuildList(mockCTX, 2).WithMany([]interface{}{&assVal1, &assVal2}).WithMany([]interface{}{&assVal3, &assVal4}).Insert()
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
@@ -2467,8 +2517,32 @@ func withMany_CorrectCase(t *testing.T) {
 		t.Fatalf("ForeignKey should be %v", assVal1.ID)
 	}
 
+	if err := testutils.CompareVal(vals[0].ForeignValue, assVal1); err != nil {
+		t.Fatal(err.Error())
+	}
+
 	if vals[1].ForeignKey != assVal2.ID {
 		t.Fatalf("ForeignKey should be %v", assVal2.ID)
+	}
+
+	if err := testutils.CompareVal(vals[1].ForeignValue, assVal2); err != nil {
+		t.Fatal(err.Error())
+	}
+
+	if vals[0].ForeignKey2 != assVal3.ID {
+		t.Fatalf("ForeignKey2 should be %v", assVal3.ID)
+	}
+
+	if err := testutils.CompareVal(vals[0].ForeignValue2, &assVal3); err != nil {
+		t.Fatal(err.Error())
+	}
+
+	if vals[1].ForeignKey2 != assVal4.ID {
+		t.Fatalf("ForeignKey2 should be %v", assVal4.ID)
+	}
+
+	if err := testutils.CompareVal(vals[1].ForeignValue2, &assVal4); err != nil {
+		t.Fatal(err.Error())
 	}
 }
 

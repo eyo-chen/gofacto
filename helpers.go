@@ -373,7 +373,9 @@ func isUintType(k reflect.Kind) bool {
 	return k >= reflect.Uint && k <= reflect.Uint64
 }
 
-// serField sets the value of the source to the field of the target
+// serField sets the value of the source to the field of the target.
+// field value of target might be a pointer or value.
+// field and source must be a pointer.
 func setField(target interface{}, fieldName string, source interface{}) error {
 	structValue := reflect.ValueOf(target).Elem()
 	fieldVal := structValue.FieldByName(fieldName)
@@ -386,17 +388,30 @@ func setField(target interface{}, fieldName string, source interface{}) error {
 		return fmt.Errorf("%s: %w", fieldName, errFieldCantSet)
 	}
 
-	val := reflect.ValueOf(source)
-	if fieldVal.Kind() == reflect.Ptr && val.Kind() != reflect.Ptr {
-		newVal := reflect.New(val.Type())
-		newVal.Elem().Set(val)
-		val = newVal
+	sourceVal := reflect.ValueOf(source).Elem()
+
+	// when fieldVal is a pointer
+	if fieldVal.Kind() == reflect.Ptr {
+		// If fieldVal is nil, create a new instance
+		if fieldVal.IsNil() {
+			fieldVal.Set(reflect.New(fieldVal.Type().Elem()))
+		}
+
+		// check if the type of the pointer is the same as the source
+		if fieldVal.Type().Elem() != sourceVal.Type() {
+			return fmt.Errorf("type mismatch: field %s is %v, source is %v", fieldName, fieldVal.Type().Elem(), sourceVal.Type())
+		}
+
+		// set the value of the pointer to the source
+		fieldVal.Elem().Set(sourceVal)
+		return nil
 	}
 
-	if fieldVal.Type() != val.Type() {
-		return errTypeDiff
+	// fieldVal is a value
+	if fieldVal.Type() != sourceVal.Type() {
+		return fmt.Errorf("type mismatch: field %s is %v, source is %v", fieldName, fieldVal.Type(), sourceVal.Type())
 	}
+	fieldVal.Set(sourceVal)
 
-	fieldVal.Set(val)
 	return nil
 }
