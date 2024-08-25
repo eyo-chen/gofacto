@@ -314,15 +314,16 @@ func (b *builderList[T]) Overwrite(ow T) *builderList[T] {
 	return b
 }
 
-// SetTrait invokes the trait function based on the given name
-func (b *builder[T]) SetTrait(name string) *builder[T] {
+// SetTrait invokes the trait function based on the given key.
+// It returns an error if the key is not found.
+func (b *builder[T]) SetTrait(key string) *builder[T] {
 	if b.err != nil {
 		return b
 	}
 
-	tr, ok := b.f.traits[name]
+	tr, ok := b.f.traits[key]
 	if !ok {
-		b.err = fmt.Errorf("%w: %s", errWithTraitNameNotFound, name)
+		b.err = fmt.Errorf("%w: %s", errWithTraitNameNotFound, key)
 		return b
 	}
 
@@ -331,16 +332,17 @@ func (b *builder[T]) SetTrait(name string) *builder[T] {
 	return b
 }
 
-// SetTraits invokes the trait functions based on the given names
-func (b *builderList[T]) SetTraits(names ...string) *builderList[T] {
+// SetTraits invokes the trait functions based on the given keys.
+// It returns an error if the key is not found.
+func (b *builderList[T]) SetTraits(keys ...string) *builderList[T] {
 	if b.err != nil {
 		return b
 	}
 
-	for i := 0; i < len(names) && i < len(b.list); i++ {
-		tr, ok := b.f.traits[names[i]]
+	for i := 0; i < len(keys) && i < len(b.list); i++ {
+		tr, ok := b.f.traits[keys[i]]
 		if !ok {
-			b.err = fmt.Errorf("%w: %s", errWithTraitNameNotFound, names[i])
+			b.err = fmt.Errorf("%w: %s", errWithTraitNameNotFound, keys[i])
 			return b
 		}
 
@@ -350,15 +352,16 @@ func (b *builderList[T]) SetTraits(names ...string) *builderList[T] {
 	return b
 }
 
-// SetTrait invokes the trait function based on the given name
-func (b *builderList[T]) SetTrait(name string) *builderList[T] {
+// SetTrait invokes the trait function based on the given key.
+// It returns an error if the key is not found.
+func (b *builderList[T]) SetTrait(key string) *builderList[T] {
 	if b.err != nil {
 		return b
 	}
 
-	tr, ok := b.f.traits[name]
+	tr, ok := b.f.traits[key]
 	if !ok {
-		b.err = fmt.Errorf("%w: %s", errWithTraitNameNotFound, name)
+		b.err = fmt.Errorf("%w: %s", errWithTraitNameNotFound, key)
 		return b
 	}
 
@@ -369,7 +372,8 @@ func (b *builderList[T]) SetTrait(name string) *builderList[T] {
 	return b
 }
 
-// SetZero sets the fields to zero value
+// SetZero sets the fields to zero value.
+// It returns an error if the field is not found.
 func (b *builder[T]) SetZero(fields ...string) *builder[T] {
 	if b.err != nil {
 		return b
@@ -394,7 +398,8 @@ func (b *builder[T]) SetZero(fields ...string) *builder[T] {
 }
 
 // SetZero sets the fields to zero value for the given index.
-// The parameter i is the index of the list you want to set the zero value
+// The parameter i is the index of the list you want to set the zero value.
+// It returns an error if the index is out of range or the field is not found.
 func (b *builderList[T]) SetZero(i int, fields ...string) *builderList[T] {
 	if b.err != nil {
 		return b
@@ -423,7 +428,8 @@ func (b *builderList[T]) SetZero(i int, fields ...string) *builderList[T] {
 	return b
 }
 
-// WihtOne set one association to the factory value
+// WihtOne set one association to the factory value.
+// Must pass a pointer to the association value.
 func (b *builder[T]) WithOne(v interface{}, ignoreFields ...string) *builder[T] {
 	if b.err != nil {
 		return b
@@ -440,7 +446,8 @@ func (b *builder[T]) WithOne(v interface{}, ignoreFields ...string) *builder[T] 
 	return b
 }
 
-// WihtOne set one association to the factory value
+// WihtOne set one association to the factory value.
+// Must pass a pointer to the association value.
 func (b *builderList[T]) WithOne(v interface{}, ignoreFields ...string) *builderList[T] {
 	if b.err != nil {
 		return b
@@ -457,7 +464,8 @@ func (b *builderList[T]) WithOne(v interface{}, ignoreFields ...string) *builder
 	return b
 }
 
-// WithMany set many associations to the factory value
+// WithMany set many associations to the factory value.
+// Must pass a pointer to the association value.
 func (b *builderList[T]) WithMany(values []interface{}, ignoreFields ...string) *builderList[T] {
 	if b.err != nil {
 		return b
