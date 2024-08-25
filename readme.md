@@ -21,11 +21,13 @@ go get github.com/eyo-chen/gofacto
 &nbsp;
 
 # Quick Start
+You can find more examples in the [examples](https://github.com/eyo-chen/gofacto/tree/main/examples) folder.
+
 Let's consider two structs: `Customer` and `Order`. `Order` struct has a foreign key `CustomerID` because a customer can have many orders.
 ```go
 type Customer struct {
     ID      int
-    Gender  Gender     // defined as enum
+    Gender  Gender     // custom defined type
     Name    string
     Email   *string
     Phone   string
@@ -38,7 +40,7 @@ type Order struct {
     Amount      float64
 }
 
-// Init a factory for Customer
+// Init a Customer factory
 customerFactory := gofacto.New(Customer{}).
                            WithDB(mysqlf.NewConfig(db)) // Assuming db is a database connection
 
@@ -52,7 +54,7 @@ customers, err := customerFactory.BuildList(ctx, 2).
 // customers[0].Gender = Female
 // customers[1].Gender = Female
 
-// Create a factory for Order
+// Init a Order factory
 orderFactory := gofacto.New(Order{}).
                         WithDB(mysqlf.NewConfig(db))
 
@@ -99,7 +101,7 @@ orders, err := factory.BuildList(ctx, 2).Insert()
 `Insert` method inserts the struct into the database and returns the struct with `ID` field populated with the auto-incremented value.<br>
 
 ### Overwrite
-Use `Overwrite` to manually set field values
+Use `Overwrite` to set specific fields
 ```go
 order, err := factory.Build(ctx).Overwrite(Order{Amount: 100}).Insert()
 // order.Amount = 100
@@ -117,7 +119,7 @@ orders, err := factory.BuildList(ctx, 2).Overwrites(Order{Amount: 100}, Order{Am
 // orders[1].Amount = 200
 ```
 
-Note: Explicit zero values are not overwritten by default. Use `SetZero` for this purpose.
+Note: Explicit zero values are not overwritten by default. Use `SetZero` or `SetTrait` for this purpose.
 ```go
 order, err := factory.Build(ctx).Overwrite(Order{Amount: 0}).Insert()
 // order.Amount != 0
@@ -125,7 +127,7 @@ order, err := factory.Build(ctx).Overwrite(Order{Amount: 0}).Insert()
 
 
 ### SetTrait
-When initializing the factory, use `WithTrait` method to set the trait functions. Then use `SetTrait` method to apply the trait functions when building the struct.
+When initializing the factory, use `WithTrait` method to set the trait functions and the corresponding keys. Then use `SetTrait` method to apply the trait functions when building the struct.
 ```go
 func setFemale(c *Customer) {
   c.Gender = Female
@@ -190,7 +192,7 @@ The format of the tag is following:<br>
 `gofacto:"foreignKey,struct:{{structName}},table:{{tableName}},field:{{fieldName}}"`<br>
 - `struct` is the name of the associated struct. It is required.<br>
 - `table` is the name of the table. It is optional, the snake case of the struct name(s) will be used if not provided.<br>
-- `field` is the name of the foreign value fields within the struct. It is optional, and only required when using gorm.<br>
+- `field` is the name of the foreign value fields within the struct. It is optional.
 
 ```go
 // build an order with one customer
@@ -347,6 +349,8 @@ type Order struct {
 ```
 It is optional to add `mongof` tag, the snake case of the field name will be used if not provided.
 
+&nbsp;
+
 # Supported ORMs
 ### GORM
 Using `NewConfig` in `gormf` package to configure the database connection
@@ -367,6 +371,9 @@ type Order struct {
 }
 ```
 It basically tells gofacto that `CustomerID` is the foreign key that references the `ID` field in the `Customer` struct, and the field `Customer` is the associated field.
+
+&nbsp;
+
 
 # Important Considerations
 1. gofacto assumes the `ID` field is the primary key and auto-incremented by the database.
