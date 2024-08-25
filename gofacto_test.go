@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"testing"
 	"time"
 
+	"github.com/eyo-chen/gofacto/internal/db"
 	"github.com/eyo-chen/gofacto/internal/testutils"
 )
 
@@ -15,6 +17,61 @@ var (
 	mockCTX = context.Background()
 )
 
+// mockDB is a mock implementation of the db.DB interface.
+type mockDB struct{}
+
+// Insert inserts a single value into the database.
+func (m *mockDB) Insert(ctx context.Context, params db.InsertParams) (interface{}, error) {
+	val := reflect.ValueOf(params.Value)
+	if err := setIDField(val); err != nil {
+		return nil, err
+	}
+
+	return params.Value, nil
+}
+
+// InsertList inserts a list of values into the database.
+func (m *mockDB) InsertList(ctx context.Context, params db.InsertListParams) ([]interface{}, error) {
+	for _, v := range params.Values {
+		val := reflect.ValueOf(v)
+		if err := setIDField(val); err != nil {
+			return nil, err
+		}
+	}
+
+	return params.Values, nil
+}
+
+// GenCustomType generates a custom type.
+func (m *mockDB) GenCustomType(reflect.Type) (interface{}, bool) {
+	return nil, false
+}
+
+// setIDField sets the ID field of a struct.
+// In this mock, it always sets the ID field to 1.
+func setIDField(val reflect.Value) error {
+	v := val.Elem()
+	idField := v.FieldByName("ID")
+	if !idField.IsValid() {
+		return errors.New("ID field not found")
+	}
+	idField.SetInt(1)
+
+	return nil
+}
+
+// testStructWithID is a struct with an ID field to test the insert functionality.
+type testStructWithID struct {
+	ID int
+}
+
+// testAssocStruct is a struct with a foreign key to test the association functionality.
+type testAssocStruct struct {
+	ID         int
+	ForeignKey int `gofacto:"foreignKey,struct:testStructWithID"`
+}
+
+// customType is a custom type to test the custom type functionality.
 type customType string
 
 const (
@@ -881,8 +938,12 @@ func buildlist_PassNegativeNumber(t *testing.T) {
 
 func TestInsert(t *testing.T) {
 	for _, fn := range map[string]func(*testing.T){
-		"when insert on builder without db, error should be returned":      insert_OnBuilder,
-		"when insert on builder list without db, error should be returned": insert_OnBuilderList,
+		"when insert on builder with db, insert successfully":              insert_OnBuilderWithDB,
+		"when insert on builder without db, error should be returned":      insert_OnBuilderWithoutDB,
+		"when insert on builder with error, error should be returned":      insert_OnBuilderWithErr,
+		"when insert on builder list with db, insert successfully":         insert_OnBuilderListWithDB,
+		"when insert on builder list without db, error should be returned": insert_OnBuilderListWithoutDB,
+		"when insert on builder list with error, error should be returned": insert_OnBuilderListWithErr,
 	} {
 		t.Run(testutils.GetFunName(fn), func(t *testing.T) {
 			fn(t)
@@ -890,7 +951,22 @@ func TestInsert(t *testing.T) {
 	}
 }
 
-func insert_OnBuilder(t *testing.T) {
+func insert_OnBuilderWithDB(t *testing.T) {
+	f := New(testStructWithID{}).WithDB(&mockDB{})
+
+	want := testStructWithID{ID: 1}
+
+	val, err := f.Build(mockCTX).Insert()
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+
+	if testutils.CompareVal(val, want) != nil {
+		t.Fatalf("got: %v, want: %v", val, want)
+	}
+}
+
+func insert_OnBuilderWithoutDB(t *testing.T) {
 	f := New(testStruct{})
 
 	want := testStruct{}
@@ -906,7 +982,38 @@ func insert_OnBuilder(t *testing.T) {
 	}
 }
 
-func insert_OnBuilderList(t *testing.T) {
+func insert_OnBuilderWithErr(t *testing.T) {
+	f := New(testStructWithID{}).WithDB(&mockDB{})
+
+	want := testStructWithID{}
+	wantErr := errFieldNotFound
+
+	val, err := f.Build(mockCTX).SetZero("incorrect field").Insert()
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("error should be %v", wantErr)
+	}
+
+	if testutils.CompareVal(val, want) != nil {
+		t.Fatalf("got: %v, want: %v", val, want)
+	}
+}
+
+func insert_OnBuilderListWithDB(t *testing.T) {
+	f := New(testStructWithID{}).WithDB(&mockDB{})
+
+	want := []testStructWithID{{ID: 1}, {ID: 1}}
+
+	val, err := f.BuildList(mockCTX, 2).Insert()
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+
+	if testutils.CompareVal(val, want) != nil {
+		t.Fatalf("got: %v, want: %v", val, want)
+	}
+}
+
+func insert_OnBuilderListWithoutDB(t *testing.T) {
 	f := New(testStruct{})
 
 	want := []testStruct{}
@@ -919,6 +1026,22 @@ func insert_OnBuilderList(t *testing.T) {
 
 	if testutils.CompareVal(vals, want) != nil {
 		t.Fatalf("got: %v, want: %v", vals, want)
+	}
+}
+
+func insert_OnBuilderListWithErr(t *testing.T) {
+	f := New(testStructWithID{}).WithDB(&mockDB{})
+
+	want := []testStructWithID{}
+	wantErr := errFieldNotFound
+
+	val, err := f.BuildList(mockCTX, 2).SetZero(1, "incorrect field").Insert()
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("error should be %v", wantErr)
+	}
+
+	if testutils.CompareVal(val, want) != nil {
+		t.Fatalf("got: %v, want: %v", val, want)
 	}
 }
 
