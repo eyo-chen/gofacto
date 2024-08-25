@@ -63,7 +63,7 @@ c := Customer{}
 order, err := orderFactory.Build(ctx).
                            WithOne(&c).
                            Insert()
-// order.CustomerID = c.ID
+// order.CustomerID == c.ID
 
 // Create and insert two orders with two customers
 c1, c2 := Customer{}, Customer{}
@@ -116,8 +116,8 @@ orders, err := factory.BuildList(ctx, 2).Overwrite(Order{Amount: 100}).Insert()
 // orders[1].Amount == 100
 
 orders, err := factory.BuildList(ctx, 2).Overwrites(Order{Amount: 100}, Order{Amount: 200}).Insert()
-// orders[0].Amount = 100
-// orders[1].Amount = 200
+// orders[0].Amount == 100
+// orders[1].Amount == 200
 ```
 
 Note: Explicit zero values are not overwritten by default. Use `SetZero` or `SetTrait` for this purpose.
@@ -139,7 +139,7 @@ factory := gofacto.New(Order{}).
                    WithTrait("female", setFemale)
 
 customer, err := factory.Build(ctx).SetTrait("female").Insert()
-// customer.Gender = Female
+// customer.Gender == Female
 ```
 
 
