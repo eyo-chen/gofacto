@@ -32,7 +32,12 @@ jobs:
         run: go build -v -o ./bin/myapp .
 
       - name: Run Tests
-        run: go test -v ./...
+        run: go test -v -race -coverprofile=profile.cov . ./typeconv/... ./db/...
+
+      - name: Upload Coverage
+        uses: shogo82148/actions-goveralls@v1
+        with:
+          path-to-profile: profile.cov
 
   go-lint:
     runs-on: ubuntu-latest
