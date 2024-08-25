@@ -51,8 +51,8 @@ customer, err := customerFactory.Build(ctx).Insert()
 customers, err := customerFactory.BuildList(ctx, 2).
                                   Overwrite(Customer{Gender: Female}).
                                   Insert()
-// customers[0].Gender = Female
-// customers[1].Gender = Female
+// customers[0].Gender == Female
+// customers[1].Gender == Female
 
 // Init a Order factory
 orderFactory := gofacto.New(Order{}).
@@ -70,8 +70,8 @@ c1, c2 := Customer{}, Customer{}
 orders, err := orderFactory.BuildList(ctx, 2).
                             WithMany([]interface{}{&c1, &c2}).
                             Insert()
-// orders[0].CustomerID = c1.ID
-// orders[1].CustomerID = c2.ID
+// orders[0].CustomerID == c1.ID
+// orders[1].CustomerID == c2.ID
 ```
 Note: All fields in the returned struct are populated with non-zero values, and `ID` field is auto-incremented by the database.
 
@@ -106,14 +106,14 @@ Use `Overwrite` to set specific fields.<br>
 The fields in the struct will be used to overwrite the fields in the generated struct.
 ```go
 order, err := factory.Build(ctx).Overwrite(Order{Amount: 100}).Insert()
-// order.Amount = 100
+// order.Amount == 100
 ```
 
 When building a list of values, `Overwrite` is used to overwrite all the list of values, and `Overwrites` is used to overwrite each value in the list of values.
 ```go
 orders, err := factory.BuildList(ctx, 2).Overwrite(Order{Amount: 100}).Insert()
-// orders[0].Amount = 100
-// orders[1].Amount = 100
+// orders[0].Amount == 100
+// orders[1].Amount == 100
 
 orders, err := factory.BuildList(ctx, 2).Overwrites(Order{Amount: 100}, Order{Amount: 200}).Insert()
 // orders[0].Amount = 100
@@ -156,12 +156,12 @@ factory := gofacto.New(Order{}).
                    WithTrait("male", setMale)
 
 customers, err := factory.BuildList(ctx, 2).SetTrait("female").Insert()
-// customers[0].Gender = Female
-// customers[1].Gender = Female
+// customers[0].Gender == Female
+// customers[1].Gender == Female
 
 customers, err := factory.BuildList(ctx, 2).SetTraits("female", "male").Insert()
-// customers[0].Gender = Female
-// customers[1].Gender = Male
+// customers[0].Gender == Female
+// customers[1].Gender == Male
 ```
 
 Find out more [examples](https://github.com/eyo-chen/gofacto/blob/main/examples/settrait_test.go).
@@ -172,12 +172,12 @@ Use `SetZero` to set specific fields to zero values.<br>
 `SetZero` method with `BuildList` accepts an index and multiple string as the field names, and the fields will be set to zero values when building the struct at the index.
 ```go
 customer, err := factory.Build(ctx).SetZero("Email", "Phone").Insert()
-// customer.Email = nil
-// customer.Phone = ""
+// customer.Email == nil
+// customer.Phone == ""
 
 customers, err := factory.BuildList(ctx, 2).SetZero(0, "Email", "Phone").Insert()
-// customers[0].Email = nil
-// customers[0].Phone = ""
+// customers[0].Email == nil
+// customers[0].Phone == ""
 // customers[1].Email != nil
 // customers[1].Phone != ""
 ```
@@ -205,20 +205,20 @@ The format of the tag is following:<br>
 // build an order with one customer
 c := Customer{}
 order, err := factory.Build(ctx).WithOne(&c).Insert()
-// order.CustomerID = c.ID
+// order.CustomerID == c.ID
 
 // build two orders with two customers
 c1 := Customer{}
 c2 := Customer{}
 orders, err := factory.BuildList(ctx, 2).WithMany(&c1, &c2).Insert()
-// orders[0].CustomerID = c1.ID
-// orders[1].CustomerID = c2.ID
+// orders[0].CustomerID == c1.ID
+// orders[1].CustomerID == c2.ID
 
 // build an order with only one customer
 c1 := Customer{}
 orders, err := factory.BuildList(ctx, 2).WithOne(&c1).Insert()
-// orders[0].CustomerID = c1.ID
-// orders[1].CustomerID = c1.ID
+// orders[0].CustomerID == c1.ID
+// orders[1].CustomerID == c1.ID
 ```
 
 Find out more [examples](https://github.com/eyo-chen/gofacto/blob/main/examples/association_test.go).
