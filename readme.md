@@ -79,13 +79,13 @@ Note: All fields in the returned struct are populated with non-zero values, and 
 
 # Usage
 ### Initialize
-Use `New` to initialize the factory by passing the struct you want to create mock data for
+Use `New` to initialize the factory by passing the struct you want to create mock data for.
 ```go
 factory := gofacto.New(Order{})
 ```
 
 ### Build & BuildList
-Use `Build` to create a single value, and `BuildList` to create a list of values
+Use `Build` to create a single value, and `BuildList` to create a list of values.
 ```go
 order, err := factory.Build(ctx).Get()
 orders, err := factory.BuildList(ctx, 2).Get()
@@ -93,20 +93,21 @@ orders, err := factory.BuildList(ctx, 2).Get()
 `Get` method returns the struct(s) without inserting them into the database. All fields are populated with non-zero values.
 
 ### Insert
-Use `Insert` to insert values into the database
+Use `Insert` to insert values into the database.<br>
+`Insert` method inserts the struct into the database and returns the struct with `ID` field populated with the auto-incremented value.<br>
 ```go
 order, err := factory.Build(ctx).Insert()
 orders, err := factory.BuildList(ctx, 2).Insert()
 ```
-`Insert` method inserts the struct into the database and returns the struct with `ID` field populated with the auto-incremented value.<br>
+Find out more [examples](https://github.com/eyo-chen/gofacto/blob/main/examples/basic_test.go).
 
 ### Overwrite
-Use `Overwrite` to set specific fields
+Use `Overwrite` to set specific fields.<br>
+The fields in the struct will be used to overwrite the fields in the generated struct.
 ```go
 order, err := factory.Build(ctx).Overwrite(Order{Amount: 100}).Insert()
 // order.Amount = 100
 ```
-The fields in the struct will be used to overwrite the fields in the generated struct.
 
 When building a list of values, `Overwrite` is used to overwrite all the list of values, and `Overwrites` is used to overwrite each value in the list of values.
 ```go
@@ -124,6 +125,8 @@ Note: Explicit zero values are not overwritten by default. Use `SetZero` or `Set
 order, err := factory.Build(ctx).Overwrite(Order{Amount: 0}).Insert()
 // order.Amount != 0
 ```
+
+Find out more [examples](https://github.com/eyo-chen/gofacto/blob/main/examples/overwrite_test.go).
 
 
 ### SetTrait
@@ -161,8 +164,12 @@ customers, err := factory.BuildList(ctx, 2).SetTraits("female", "male").Insert()
 // customers[1].Gender = Male
 ```
 
+Find out more [examples](https://github.com/eyo-chen/gofacto/blob/main/examples/settrait_test.go).
+
 ### SetZero
-Use `SetZero` to set specific fields to zero values.
+Use `SetZero` to set specific fields to zero values.<br>
+`SetZero` method with `Build` accepts multiple string as the field names, and the fields will be set to zero values when building the struct.<br>
+`SetZero` method with `BuildList` accepts an index and multiple string as the field names, and the fields will be set to zero values when building the struct at the index.
 ```go
 customer, err := factory.Build(ctx).SetZero("Email", "Phone").Insert()
 // customer.Email = nil
@@ -174,8 +181,8 @@ customers, err := factory.BuildList(ctx, 2).SetZero(0, "Email", "Phone").Insert(
 // customers[1].Email != nil
 // customers[1].Phone != ""
 ```
-`SetZero` method with `Build` accepts multiple string as the field names, and the fields will be set to zero values when building the struct.<br>
-`SetZero` method with `BuildList` accepts an index and multiple string as the field names, and the fields will be set to zero values when building the struct at the index.
+
+Find out more [examples](https://github.com/eyo-chen/gofacto/blob/main/examples/setzero_test.go).
 
 ### WithOne & WithMany
 When there is the associations relationship between the structs, use `WithOne` and `WithMany` methods to build the associated structs.<br>
@@ -214,6 +221,8 @@ orders, err := factory.BuildList(ctx, 2).WithOne(&c1).Insert()
 // orders[1].CustomerID = c1.ID
 ```
 
+Find out more [examples](https://github.com/eyo-chen/gofacto/blob/main/examples/association_test.go).
+
 ### Reset
 Use `Reset` method to reset the factory.
 ```go
@@ -242,8 +251,10 @@ It is useful when the clients want to set the default values for the struct.<br>
 The signature of the blueprint function is following:<br>
 `type blueprintFunc[T any] func(i int) T`
 
+Find out more [examples](https://github.com/eyo-chen/gofacto/blob/main/examples/blueprint_test.go).
+
 #### WithStorageName
-Use `WithStorageName` method to set the storage name
+Use `WithStorageName` method to set the storage name.
 ```go
 factory := gofacto.New(Order{}).
                    WithStorageName("orders")
@@ -256,7 +267,7 @@ When using NoSQL databases, the storage name is the collection name. <br>
 It is optional, the snake case of the struct name(s) will be used if not provided.<br>
 
 #### WithDB
-Use `WithDB` method to set the database connection
+Use `WithDB` method to set the database connection.
 ```go
 factory := gofacto.New(Order{}).
                    WithDB(mysqlf.NewConfig(db))
@@ -267,7 +278,7 @@ When using MongoDB, use `mongof` package. <br>
 When using GORM, use `gormf` package. <br>
 
 #### WithIsSetZeroValue
-Use `WithIsSetZeroValue` method to set if the zero values are set
+Use `WithIsSetZeroValue` method to set if the zero values are set.
 ```go
 factory := gofacto.New(Order{}).
                    WithIsSetZeroValue(false)
@@ -277,7 +288,7 @@ The zero values will not be set when building the struct if the flag is set to f
 It is optional, it's true by default.
 
 #### omit tag
-Use `omit` tag in the struct to ignore the field when building the struct
+Use `omit` tag in the struct to ignore the field when building the struct.
 ```go
 type Order struct {
   ID          int
@@ -293,7 +304,7 @@ The field `Ignore` will not be set to non-zero values when building the struct.
 
 # Supported Databases
 ### MySQL
-Using `NewConfig` in `mysqlf` package to configure the database connection
+Using `NewConfig` in `mysqlf` package to configure the database connection.
 ```go
 factory := gofacto.New(Order{}).
                    WithDB(mysqlf.NewConfig(db))
@@ -312,7 +323,7 @@ type Order struct {
 It is optional to add `mysqlf` tag, the snake case of the field name will be used if not provided.
 
 ### PostgreSQL
-Using `NewConfig` in `postgresf` package to configure the database connection
+Using `NewConfig` in `postgresf` package to configure the database connection.
 ```go
 factory := gofacto.New(Order{}).
                    WithDB(postgresf.NewConfig(db))
@@ -331,7 +342,7 @@ type Order struct {
 It is optional to add `postgresf` tag, the snake case of the field name will be used if not provided.
 
 ### MongoDB
-Using `NewConfig` in `mongof` package to configure the database connection
+Using `NewConfig` in `mongof` package to configure the database connection.
 ```go
 factory := gofacto.New(Order{}).
                    WithDB(mongof.NewConfig(db))
@@ -353,7 +364,7 @@ It is optional to add `mongof` tag, the snake case of the field name will be use
 
 # Supported ORMs
 ### GORM
-Using `NewConfig` in `gormf` package to configure the database connection
+Using `NewConfig` in `gormf` package to configure the database connection.
 ```go
 factory := gofacto.New(Order{}).
                    WithDB(gormf.NewConfig(db))
@@ -418,4 +429,3 @@ type User struct {
 
 # Acknowledgements
 This library is inspired by the [factory](https://github.com/nauyey/factory), [fixtory](https://github.com/k-yomo/fixtory), [factory-go](https://github.com/bluele/factory-go), and [gogo-factory](https://github.com/vx416/gogo-factory).
-
