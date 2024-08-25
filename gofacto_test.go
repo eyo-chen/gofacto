@@ -92,6 +92,13 @@ const (
 type testStruct struct {
 	Int            int
 	PtrInt         *int
+	Int8           int8
+	Int32          int32
+	Int64          int64
+	Uint           uint
+	Uint8          uint8
+	Uint32         uint32
+	Uint64         uint64
 	CustomType     customType
 	PtrCustomType  *customType
 	Str            string
@@ -141,6 +148,13 @@ func build_BluePrintAllFields(t *testing.T) {
 		return testStruct{
 			Int:            i * 2,
 			PtrInt:         &i,
+			Int8:           int8(i),
+			Int32:          int32(i),
+			Int64:          int64(i),
+			Uint:           uint(i),
+			Uint8:          uint8(i),
+			Uint32:         uint32(i),
+			Uint64:         uint64(i),
 			CustomType:     customType1,
 			PtrCustomType:  &c,
 			Str:            str,
@@ -179,6 +193,13 @@ func build_BluePrintAllFields(t *testing.T) {
 				return testStruct{
 					Int:            i2,
 					PtrInt:         &i1,
+					Int8:           int8(i1),
+					Int32:          int32(i1),
+					Int64:          int64(i1),
+					Uint:           uint(i1),
+					Uint8:          uint8(i1),
+					Uint32:         uint32(i1),
+					Uint64:         uint64(i1),
 					CustomType:     customType1,
 					PtrCustomType:  &c,
 					Str:            str,
@@ -211,6 +232,13 @@ func build_BluePrintAllFields(t *testing.T) {
 				return testStruct{
 					Int:            i4,
 					PtrInt:         &i2,
+					Int8:           int8(i2),
+					Int32:          int32(i2),
+					Int64:          int64(i2),
+					Uint:           uint(i2),
+					Uint8:          uint8(i2),
+					Uint32:         uint32(i2),
+					Uint64:         uint64(i2),
 					CustomType:     customType1,
 					PtrCustomType:  &c,
 					Str:            str,
@@ -514,6 +542,13 @@ func buildList_BluePrintAllFields(t *testing.T) {
 		return testStruct{
 			Int:            i * 2,
 			PtrInt:         &i,
+			Int8:           int8(i),
+			Int32:          int32(i),
+			Int64:          int64(i),
+			Uint:           uint(i),
+			Uint8:          uint8(i),
+			Uint32:         uint32(i),
+			Uint64:         uint64(i),
 			CustomType:     c,
 			PtrCustomType:  &c,
 			Str:            str,
@@ -552,6 +587,13 @@ func buildList_BluePrintAllFields(t *testing.T) {
 					{
 						Int:            i2,
 						PtrInt:         &i1,
+						Int8:           int8(i1),
+						Int32:          int32(i1),
+						Int64:          int64(i1),
+						Uint:           uint(i1),
+						Uint8:          uint8(i1),
+						Uint32:         uint32(i1),
+						Uint64:         uint64(i1),
 						CustomType:     c,
 						PtrCustomType:  &c,
 						Str:            str1,
@@ -573,6 +615,13 @@ func buildList_BluePrintAllFields(t *testing.T) {
 					{
 						Int:            i4,
 						PtrInt:         &i2,
+						Int8:           int8(i2),
+						Int32:          int32(i2),
+						Int64:          int64(i2),
+						Uint:           uint(i2),
+						Uint8:          uint8(i2),
+						Uint32:         uint32(i2),
+						Uint64:         uint64(i2),
 						CustomType:     c,
 						PtrCustomType:  &c,
 						Str:            str2,
@@ -607,6 +656,13 @@ func buildList_BluePrintAllFields(t *testing.T) {
 					{
 						Int:            i6,
 						PtrInt:         &i3,
+						Int8:           int8(i3),
+						Int32:          int32(i3),
+						Int64:          int64(i3),
+						Uint:           uint(i3),
+						Uint8:          uint8(i3),
+						Uint32:         uint32(i3),
+						Uint64:         uint64(i3),
 						CustomType:     c,
 						PtrCustomType:  &c,
 						Str:            str3,
@@ -628,6 +684,13 @@ func buildList_BluePrintAllFields(t *testing.T) {
 					{
 						Int:            i8,
 						PtrInt:         &i4,
+						Int8:           int8(i4),
+						Int32:          int32(i4),
+						Int64:          int64(i4),
+						Uint:           uint(i4),
+						Uint8:          uint8(i4),
+						Uint32:         uint32(i4),
+						Uint64:         uint64(i4),
 						CustomType:     c,
 						PtrCustomType:  &c,
 						Str:            str4,
@@ -1922,7 +1985,7 @@ func setZero_OnBuilderListWithBluePrint(t *testing.T) {
 				{"Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct", "privateField", "CustomType", "PtrCustomType"},
 			},
 			wantNonZeroFields: [][]string{
-				{"Int", "PtrInt", "Str", "PtrStr", "Bool", "PtrBool", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct", "CustomType", "PtrCustomType"},
+				{"Int", "PtrInt", "Int8", "Int32", "Int64", "Uint", "Uint8", "Uint32", "Uint64", "Str", "PtrStr", "Bool", "PtrBool", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct", "CustomType", "PtrCustomType"},
 				testutils.FilterFields(testStruct{}, "Int", "PtrInt", "Time", "PtrTime", "Float", "PtrFloat", "Interface", "Struct", "PtrStruct", "Slice", "PtrSlice", "SliceStruct", "SlicePtrStruct", "CustomType", "PtrCustomType"),
 			},
 			wantErr: nil,

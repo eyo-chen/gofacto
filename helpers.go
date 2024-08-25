@@ -407,7 +407,7 @@ func setField(target interface{}, fieldName string, source interface{}) error {
 		return nil
 	}
 
-	// fieldVal is a value
+	// when fieldVal is a value
 	if fieldVal.Type() != sourceVal.Type() {
 		return fmt.Errorf("type mismatch: field %s is %v, source is %v", fieldName, fieldVal.Type(), sourceVal.Type())
 	}
