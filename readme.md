@@ -1,5 +1,6 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/eyo-chen/gofacto.svg)](https://pkg.go.dev/github.com/eyo-chen/gofacto)
 [![Go Report Card](https://goreportcard.com/badge/github.com/eyo-chen/gofacto)](https://goreportcard.com/report/github.com/eyo-chen/gofacto)
+[![Coverage Status](https://coveralls.io/repos/github/eyo-chen/gofacto/badge.svg?branch=main)](https://coveralls.io/github/eyo-chen/gofacto?branch=main)
 
 # gofacto
 
