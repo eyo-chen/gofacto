@@ -2230,3 +2230,17 @@ func reset_Index(t *testing.T) {
 		t.Fatalf("index should be 1")
 	}
 }
+
+func TestWithStorageName(t *testing.T) {
+	f := New(testStruct{}).WithStorageName("test")
+	if f.storageName != "test" {
+		t.Fatalf("storageName should be %v", "test")
+	}
+}
+
+func TestWithDB(t *testing.T) {
+	f := New(testStruct{}).WithDB(&mockDB{})
+	if f.db == nil {
+		t.Fatalf("db should not be nil")
+	}
+}
