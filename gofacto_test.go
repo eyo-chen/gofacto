@@ -2206,6 +2206,133 @@ func setZero_OnBuilderListMany(t *testing.T) {
 	}
 }
 
+func TestWithOne(t *testing.T) {
+	for _, fn := range map[string]func(*testing.T){
+		"when withOne on builder, insert successfully":        withOne_OnBuilder,
+		"when withOne on builder with err, return error":      withOne_OnBuilderWithErr,
+		"when withOne on builder list, insert successfully":   withOne_OnBuilderList,
+		"when withOne on builder list with err, return error": withOne_OnBuilderListWithErr,
+	} {
+		t.Run(testutils.GetFunName(fn), func(t *testing.T) {
+			fn(t)
+		})
+	}
+}
+
+func withOne_OnBuilder(t *testing.T) {
+	f := New(testAssocStruct{}).WithDB(&mockDB{})
+
+	assVal := testStructWithID{}
+	val, err := f.Build(mockCTX).WithOne(&assVal).Insert()
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+
+	if val.ForeignKey != assVal.ID {
+		t.Fatalf("ForeignKey should be %v", assVal.ID)
+	}
+}
+
+func withOne_OnBuilderWithErr(t *testing.T) {
+	f := New(testAssocStruct{}).WithDB(&mockDB{})
+
+	want := testAssocStruct{}
+	wantErr := errFieldNotFound
+
+	assVal := testStructWithID{}
+	val, err := f.Build(mockCTX).SetZero("incorrect field").WithOne(&assVal).Insert()
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("error should be %v", wantErr)
+	}
+
+	if err := testutils.CompareVal(val, want); err != nil {
+		t.Fatal(err.Error())
+	}
+}
+
+func withOne_OnBuilderList(t *testing.T) {
+	f := New(testAssocStruct{}).WithDB(&mockDB{})
+
+	assVal := testStructWithID{}
+	vals, err := f.BuildList(mockCTX, 2).WithOne(&assVal).Insert()
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+
+	if vals[0].ForeignKey != assVal.ID {
+		t.Fatalf("ForeignKey should be %v", assVal.ID)
+	}
+
+	if vals[1].ForeignKey != assVal.ID {
+		t.Fatalf("ForeignKey should be %v", assVal.ID)
+	}
+}
+
+func withOne_OnBuilderListWithErr(t *testing.T) {
+	f := New(testAssocStruct{}).WithDB(&mockDB{})
+
+	want := []testAssocStruct{}
+	wantErr := errFieldNotFound
+
+	assVal := testStructWithID{}
+	vals, err := f.BuildList(mockCTX, 2).SetZero(0, "incorrect field").WithOne(&assVal).Insert()
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("error should be %v", wantErr)
+	}
+
+	if err := testutils.CompareVal(vals, want); err != nil {
+		t.Fatal(err.Error())
+	}
+}
+
+func TestWithMany(t *testing.T) {
+	for _, fn := range map[string]func(*testing.T){
+		"when withMany on builder, insert successfully":   withMany_CorrectCase,
+		"when withMany on builder with err, return error": withMany_WithErr,
+	} {
+		t.Run(testutils.GetFunName(fn), func(t *testing.T) {
+			fn(t)
+		})
+	}
+}
+
+func withMany_CorrectCase(t *testing.T) {
+	f := New(testAssocStruct{}).WithDB(&mockDB{})
+
+	assVal1 := testStructWithID{}
+	assVal2 := testStructWithID{}
+	vals, err := f.BuildList(mockCTX, 2).WithMany([]interface{}{&assVal1, &assVal2}).Insert()
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+
+	if vals[0].ForeignKey != assVal1.ID {
+		t.Fatalf("ForeignKey should be %v", assVal1.ID)
+	}
+
+	if vals[1].ForeignKey != assVal2.ID {
+		t.Fatalf("ForeignKey should be %v", assVal2.ID)
+	}
+}
+
+func withMany_WithErr(t *testing.T) {
+	f := New(testAssocStruct{}).WithDB(&mockDB{})
+
+	wantErr := errFieldNotFound
+	want := []testAssocStruct{}
+
+	assVal1 := testStructWithID{}
+	assVal2 := testStructWithID{}
+	vals, err := f.BuildList(mockCTX, 2).SetZero(0, "incorrect field").WithMany([]interface{}{&assVal1, &assVal2}).Insert()
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("error should be %v", wantErr)
+	}
+
+	if err := testutils.CompareVal(vals, want); err != nil {
+		t.Fatal(err.Error())
+	}
+}
+
 func TestReset(t *testing.T) {
 	// TODO: should test associations
 	for _, fn := range map[string]func(*testing.T){
