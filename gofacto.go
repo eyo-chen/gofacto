@@ -73,6 +73,11 @@ func New[T any](v T) *Factory[T] {
 	}
 
 	ti, ifd, err := extractTag(dataType)
+	if err != nil {
+		return &Factory[T]{
+			err: err,
+		}
+	}
 
 	return &Factory[T]{
 		dataType:       dataType,
@@ -84,7 +89,6 @@ func New[T any](v T) *Factory[T] {
 		index:          1,
 		isSetZeroValue: true,
 		traits:         map[string]setTraiter[T]{},
-		err:            err,
 	}
 }
 
