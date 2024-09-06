@@ -76,7 +76,7 @@ type testStructWithID2 struct {
 type testAssocStruct struct {
 	ID            int
 	ForeignKey    int `gofacto:"foreignKey,struct:testStructWithID,field:ForeignValue"`
-	ForeignKey2   int `gofacto:"foreignKey,struct:testStructWithID2,field:ForeignValue2"`
+	ForeignKey2   int `gofacto:"foreignKey,struct:testStructWithID2,field:ForeignValue2,table:test_struct_with_id2s"`
 	ForeignValue  testStructWithID
 	ForeignValue2 *testStructWithID2
 }
@@ -122,6 +122,238 @@ type testStruct struct {
 type subStruct struct {
 	ID   int
 	Name string
+}
+
+func TestNew(t *testing.T) {
+	for _, fn := range map[string]func(*testing.T){
+		"when not pass any config, default config should be set": new_NoConfig,
+		"when pass blueprint, blueprint should be set":           new_WithBlueprint,
+		"when pass storage name, storage name should be set":     new_WithStorageName,
+		"when pass db, db should be set":                         new_WithDB,
+		"when pass isSetZeroValue, isSetZeroValue should be set": new_WithIsSetZeroValue,
+		"when pass trait, trait should be set":                   new_WithTrait,
+		"when pass correct tag, should be set":                   new_CorrectTagFormat,
+		"when pass non struct, should return error":              new_PassNonStruct,
+		"when pass wrong tag, should return error":               new_WrongTagKey,
+		"when pass wrong tag foreign key, should return error":   new_WrongTagForeignKey,
+		"when pass empty tag, should return error":               new_EmptyTag,
+		"when pass wrong tag format, should return error":        new_WrongTagFormat,
+	} {
+		t.Run(testutils.GetFunName(fn), func(t *testing.T) {
+			fn(t)
+		})
+	}
+}
+
+func new_NoConfig(t *testing.T) {
+	got := New(testStruct{})
+
+	want := &Factory[testStruct]{
+		dataType:       reflect.TypeOf(testStruct{}),
+		storageName:    "test_structs",
+		tagToInfo:      map[string]tagInfo{},
+		ignoreFields:   []string{},
+		index:          1,
+		isSetZeroValue: true,
+	}
+
+	if err := checkFactory(got, want); err != nil {
+		t.Fatal(err.Error())
+	}
+}
+
+func new_WithBlueprint(t *testing.T) {
+	blueprint := func(i int) testStruct {
+		return testStruct{
+			Int: i * 2,
+		}
+	}
+
+	got := New(testStruct{}).WithBlueprint(blueprint)
+
+	want := &Factory[testStruct]{
+		blueprint:      blueprint,
+		dataType:       reflect.TypeOf(testStruct{}),
+		empty:          testStruct{},
+		associations:   map[string][]interface{}{},
+		storageName:    "test_structs",
+		tagToInfo:      map[string]tagInfo{},
+		ignoreFields:   []string{},
+		index:          1,
+		isSetZeroValue: true,
+	}
+
+	if err := checkFactory(got, want); err != nil {
+		t.Fatal(err.Error())
+	}
+}
+
+func new_WithStorageName(t *testing.T) {
+	storageName := "test_storage"
+	got := New(testStruct{}).WithStorageName(storageName)
+
+	want := &Factory[testStruct]{
+		dataType:       reflect.TypeOf(testStruct{}),
+		storageName:    "test_storage",
+		tagToInfo:      map[string]tagInfo{},
+		ignoreFields:   []string{},
+		index:          1,
+		isSetZeroValue: true,
+	}
+
+	if err := checkFactory(got, want); err != nil {
+		t.Fatal(err.Error())
+	}
+}
+
+func new_WithDB(t *testing.T) {
+	db := &mockDB{}
+	got := New(testStruct{}).WithDB(db)
+
+	want := &Factory[testStruct]{
+		dataType:       reflect.TypeOf(testStruct{}),
+		storageName:    "test_structs",
+		tagToInfo:      map[string]tagInfo{},
+		ignoreFields:   []string{},
+		index:          1,
+		isSetZeroValue: true,
+		db:             db,
+	}
+
+	if err := checkFactory(got, want); err != nil {
+		t.Fatal(err.Error())
+	}
+}
+
+func new_WithIsSetZeroValue(t *testing.T) {
+	got := New(testStruct{}).WithIsSetZeroValue(false)
+
+	want := &Factory[testStruct]{
+		dataType:       reflect.TypeOf(testStruct{}),
+		storageName:    "test_structs",
+		tagToInfo:      map[string]tagInfo{},
+		ignoreFields:   []string{},
+		index:          1,
+		isSetZeroValue: false,
+	}
+
+	if err := checkFactory(got, want); err != nil {
+		t.Fatal(err.Error())
+	}
+}
+
+func new_WithTrait(t *testing.T) {
+	trait := func(*testStruct) {}
+
+	got := New(testStruct{}).WithTrait("test", trait)
+
+	want := &Factory[testStruct]{
+		dataType:       reflect.TypeOf(testStruct{}),
+		storageName:    "test_structs",
+		tagToInfo:      map[string]tagInfo{},
+		ignoreFields:   []string{},
+		index:          1,
+		isSetZeroValue: true,
+		traits: map[string]setTraiter[testStruct]{
+			"test": trait,
+		},
+	}
+
+	if err := checkFactory(got, want); err != nil {
+		t.Fatal(err.Error())
+	}
+}
+
+func new_CorrectTagFormat(t *testing.T) {
+	got := New(testAssocStruct{})
+
+	want := &Factory[testAssocStruct]{
+		dataType:    reflect.TypeOf(testAssocStruct{}),
+		storageName: "test_assoc_structs",
+		tagToInfo: map[string]tagInfo{
+			"testStructWithID":  {tableName: "test_struct_with_ids", fieldName: "ForeignKey", foreignField: "ForeignValue"},
+			"testStructWithID2": {tableName: "test_struct_with_id2s", fieldName: "ForeignKey2", foreignField: "ForeignValue2"},
+		},
+		ignoreFields:   []string{},
+		index:          1,
+		isSetZeroValue: true,
+	}
+
+	if err := checkFactory(got, want); err != nil {
+		t.Fatal(err.Error())
+	}
+}
+
+func new_PassNonStruct(t *testing.T) {
+	got := New(1)
+
+	want := &Factory[int]{
+		err: errInvalidType,
+	}
+
+	if err := checkFactory(got, want); err != nil {
+		t.Fatal(err.Error())
+	}
+}
+
+func new_WrongTagKey(t *testing.T) {
+	type testStructWithWrongTag struct {
+		ID int `gofacto:"foreignKey,struct:testStructWithID,field:ForeignValue,wrongName:test_struct_with_ids"`
+	}
+	got := New(testStructWithWrongTag{})
+
+	want := &Factory[testStructWithWrongTag]{
+		err: errTagFormat,
+	}
+
+	if err := checkFactory(got, want); err != nil {
+		t.Fatal(err.Error())
+	}
+}
+
+func new_WrongTagForeignKey(t *testing.T) {
+	type testStructWithWrongTagColon struct {
+		ID int `gofacto:"wrongforeignKey,struct:testStructWithID,field:ForeignValue,table:test_struct_with_ids"`
+	}
+	got := New(testStructWithWrongTagColon{})
+
+	want := &Factory[testStructWithWrongTagColon]{
+		err: errTagFormat,
+	}
+
+	if err := checkFactory(got, want); err != nil {
+		t.Fatal(err.Error())
+	}
+}
+
+func new_EmptyTag(t *testing.T) {
+	type testStructWithWrongTagColon struct {
+		ID int `gofacto:";"`
+	}
+	got := New(testStructWithWrongTagColon{})
+
+	want := &Factory[testStructWithWrongTagColon]{
+		err: errTagFormat,
+	}
+
+	if err := checkFactory(got, want); err != nil {
+		t.Fatal(err.Error())
+	}
+}
+
+func new_WrongTagFormat(t *testing.T) {
+	type testStructWithWrongTagColon struct {
+		ID int `gofacto:"aa;bb"`
+	}
+	got := New(testStructWithWrongTagColon{})
+
+	want := &Factory[testStructWithWrongTagColon]{
+		err: errTagFormat,
+	}
+
+	if err := checkFactory(got, want); err != nil {
+		t.Fatal(err.Error())
+	}
 }
 
 func TestBuild(t *testing.T) {
@@ -2725,4 +2957,48 @@ func TestWithDB(t *testing.T) {
 	if f.db == nil {
 		t.Fatalf("db should not be nil")
 	}
+}
+
+func checkFactory[T any](got, want *Factory[T]) error {
+	if got.storageName != want.storageName {
+		return fmt.Errorf("storageName should be %s", want.storageName)
+	}
+
+	if got.dataType != want.dataType {
+		return fmt.Errorf("dataType should be %v", want.dataType)
+	}
+
+	if got.index != want.index {
+		return fmt.Errorf("index should be %v", want.index)
+	}
+
+	if testutils.CompareVal(got.ignoreFields, want.ignoreFields) != nil {
+		return fmt.Errorf("ignoreFields should be %v", want.ignoreFields)
+	}
+
+	if got.isSetZeroValue != want.isSetZeroValue {
+		return fmt.Errorf("isSetZeroValue should be %v", want.isSetZeroValue)
+	}
+
+	if !errors.Is(got.err, want.err) {
+		return fmt.Errorf("err should be %v", want.err)
+	}
+
+	if len(got.traits) != len(want.traits) {
+		return fmt.Errorf("traits should be %v", want.traits)
+	}
+
+	if testutils.CompareVal(got.tagToInfo, want.tagToInfo) != nil {
+		return fmt.Errorf("tagToInfo should be %v", want.tagToInfo)
+	}
+
+	if (got.blueprint == nil) != (want.blueprint == nil) {
+		return fmt.Errorf("blueprint mismatch: got %v, want %v", got.blueprint != nil, want.blueprint != nil)
+	}
+
+	if (got.db == nil) != (want.db == nil) {
+		return fmt.Errorf("db mismatch: got %v, want %v", got.db != nil, want.db != nil)
+	}
+
+	return nil
 }
