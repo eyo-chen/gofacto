@@ -66,6 +66,12 @@ type builderList[T any] struct {
 func New[T any](v T) *Factory[T] {
 	dataType := reflect.TypeOf(v)
 
+	if dataType.Kind() != reflect.Struct {
+		return &Factory[T]{
+			err: fmt.Errorf("%w: %v", errInvalidType, dataType.Kind()),
+		}
+	}
+
 	ti, ifd, err := extractTag(dataType)
 
 	return &Factory[T]{

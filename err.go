@@ -5,6 +5,9 @@ import (
 )
 
 var (
+	// errInvalidType is the error representing that type is invalid
+	errInvalidType = errors.New("invalid type")
+
 	// errBuildListNGreaterThanZero is the error representing that n must be greater than 0
 	errBuildListNGreaterThanZero = errors.New("n must be greater than 0")
 
