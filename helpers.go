@@ -312,10 +312,6 @@ func extractTag(dataType reflect.Type) (map[string]tagInfo, []string, error) {
 
 			for _, subPart := range subParts[1:] {
 				kv := strings.SplitN(subPart, ":", 2)
-				if len(kv) != 2 {
-					return nil, nil, errTagFormat
-				}
-
 				switch kv[0] {
 				case "struct":
 					structName = kv[1]
