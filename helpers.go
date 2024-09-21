@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/eyo-chen/gofacto/internal/db"
-	"github.com/eyo-chen/gofacto/internal/utils"
 )
 
 const (
@@ -288,47 +286,21 @@ func extractTag(dataType reflect.Type) (map[string]tagInfo, []string, error) {
 
 	for i := 0; i < numField; i++ {
 		field := dataType.Field(i)
-		tag := field.Tag.Get(packageName)
-		if tag == "" {
+		tagStr := field.Tag.Get(packageName)
+		if tagStr == "" {
 			continue
 		}
 
-		parts := strings.Split(tag, ";")
-		if len(parts) == 0 {
-			return nil, nil, errTagFormat
+		t, err := parseTag(tagStr)
+		if err != nil {
+			return nil, nil, err
 		}
 
-		var structName, tableName, foreignField string
-		for _, part := range parts {
-			if part == "omit" {
-				ignoreFields = append(ignoreFields, field.Name)
-				continue
-			}
-
-			subParts := strings.Split(part, ",")
-			if subParts[0] != "foreignKey" {
-				return nil, nil, errTagFormat
-			}
-
-			for _, subPart := range subParts[1:] {
-				kv := strings.SplitN(subPart, ":", 2)
-				switch kv[0] {
-				case "struct":
-					structName = kv[1]
-				case "table":
-					tableName = kv[1]
-				case "field":
-					foreignField = kv[1]
-				default:
-					return nil, nil, errTagFormat
-				}
-			}
+		if t.omit {
+			ignoreFields = append(ignoreFields, field.Name)
 		}
 
-		if tableName == "" {
-			tableName = utils.CamelToSnake(structName) + "s"
-		}
-		tagToInfo[structName] = tagInfo{tableName: tableName, fieldName: field.Name, foreignField: foreignField}
+		tagToInfo[t.structName] = tagInfo{tableName: t.tableName, fieldName: field.Name, foreignField: t.foreignField}
 	}
 
 	return tagToInfo, ignoreFields, nil
