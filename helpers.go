@@ -338,6 +338,10 @@ func extractTag(dataType reflect.Type) (map[string]tagInfo, []string, error) {
 // and it also handles the conversion between int and uint.
 // Normally, it's used to set the ID field of the target struct
 func setIntValue(target, source reflect.Value) {
+	if target.Kind() == reflect.Ptr {
+		target = target.Elem()
+	}
+
 	targetKind := target.Kind()
 	sourceKind := source.Kind()
 

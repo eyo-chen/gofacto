@@ -74,9 +74,10 @@ type testStructWithID2 struct {
 
 // testAssocStruct is a struct with a foreign key to test the association functionality.
 type testAssocStruct struct {
-	ID            int
-	ForeignKey    int `gofacto:"foreignKey,struct:testStructWithID,field:ForeignValue"`
-	ForeignKey2   int `gofacto:"foreignKey,struct:testStructWithID2,field:ForeignValue2,table:test_struct_with_id2s"`
+	ID          int
+	ForeignKey  int  `gofacto:"foreignKey,struct:testStructWithID,field:ForeignValue"`
+	ForeignKey2 *int `gofacto:"foreignKey,struct:testStructWithID2,field:ForeignValue2,table:test_struct_with_id2s"`
+
 	ForeignValue  testStructWithID
 	ForeignValue2 *testStructWithID2
 }
@@ -2563,16 +2564,16 @@ func setZero_OnBuilderListMany(t *testing.T) {
 
 func TestWithOne(t *testing.T) {
 	for _, fn := range map[string]func(*testing.T){
-		"when withOne on builder, insert successfully":                      withOne_OnBuilder,
-		"when withOne on builder not pass ptr, return error":                withOne_OnBuilderNotPassPtr,
-		"when withOne on builder not pass struct, return error":             withOne_OnBuilderNotPassStruct,
-		"when withOne on builder not pass struct in tag, return error":      withOne_OnBuilderNotPassStructInTag,
-		"when withOne on builder with err, return error":                    withOne_OnBuilderWithErr,
-		"when withOne on builder list, insert successfully":                 withOne_OnBuilderList,
-		"when withOne on builder list not pass ptr, return error":           withOne_OnBuilderListNotPassPtr,
-		"when withOne on builder list not pass struct, return error":        withOne_OnBuilderListNotPassStruct,
-		"when withOne on builder list not pass struct in tag, return error": withOne_OnBuilderListNotPassStructInTag,
-		"when withOne on builder list with err, return error":               withOne_OnBuilderListWithErr,
+		"when on builder, insert successfully":                      withOne_OnBuilder,
+		"when on builder not pass ptr, return error":                withOne_OnBuilderNotPassPtr,
+		"when on builder not pass struct, return error":             withOne_OnBuilderNotPassStruct,
+		"when on builder not pass struct in tag, return error":      withOne_OnBuilderNotPassStructInTag,
+		"when on builder with err, return error":                    withOne_OnBuilderWithErr,
+		"when on builder list, insert successfully":                 withOne_OnBuilderList,
+		"when on builder list not pass ptr, return error":           withOne_OnBuilderListNotPassPtr,
+		"when on builder list not pass struct, return error":        withOne_OnBuilderListNotPassStruct,
+		"when on builder list not pass struct in tag, return error": withOne_OnBuilderListNotPassStructInTag,
+		"when on builder list with err, return error":               withOne_OnBuilderListWithErr,
 	} {
 		t.Run(testutils.GetFunName(fn), func(t *testing.T) {
 			fn(t)
@@ -2594,7 +2595,7 @@ func withOne_OnBuilder(t *testing.T) {
 		t.Fatalf("ForeignKey should be %v", assVal.ID)
 	}
 
-	if val.ForeignKey2 != assVal.ID {
+	if val.ForeignKey2 != nil && *val.ForeignKey2 != assVal.ID {
 		t.Fatalf("ForeignKey2 should be %v", assVal.ID)
 	}
 
@@ -2699,7 +2700,7 @@ func withOne_OnBuilderList(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	if vals[0].ForeignKey2 != assVal2.ID {
+	if vals[0].ForeignKey2 != nil && *vals[0].ForeignKey2 != assVal2.ID {
 		t.Fatalf("ForeignKey2 should be %v", assVal2.ID)
 	}
 
@@ -2707,7 +2708,7 @@ func withOne_OnBuilderList(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	if vals[1].ForeignKey2 != assVal2.ID {
+	if vals[1].ForeignKey2 != nil && *vals[1].ForeignKey2 != assVal2.ID {
 		t.Fatalf("ForeignKey2 should be %v", assVal2.ID)
 	}
 
@@ -2824,7 +2825,7 @@ func withMany_CorrectCase(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	if vals[0].ForeignKey2 != assVal3.ID {
+	if vals[0].ForeignKey2 != nil && *vals[0].ForeignKey2 != assVal3.ID {
 		t.Fatalf("ForeignKey2 should be %v", assVal3.ID)
 	}
 
@@ -2832,7 +2833,7 @@ func withMany_CorrectCase(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	if vals[1].ForeignKey2 != assVal4.ID {
+	if vals[1].ForeignKey2 != nil && *vals[1].ForeignKey2 != assVal4.ID {
 		t.Fatalf("ForeignKey2 should be %v", assVal4.ID)
 	}
 
