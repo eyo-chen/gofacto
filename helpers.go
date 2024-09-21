@@ -339,9 +339,6 @@ func extractTag(dataType reflect.Type) (map[string]tagInfo, []string, error) {
 // Normally, it's used to set the ID field of the target struct
 func setIntValue(target, source reflect.Value) {
 	if target.Kind() == reflect.Ptr {
-		if target.IsNil() {
-			target.Set(reflect.New(target.Type().Elem()))
-		}
 		target = target.Elem()
 	}
 
