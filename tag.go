@@ -1,6 +1,7 @@
 package gofacto
 
 import (
+	"reflect"
 	"strings"
 
 	"github.com/eyo-chen/gofacto/internal/utils"
@@ -12,6 +13,34 @@ type tag struct {
 	tableName    string
 	foreignField string
 	omit         bool
+}
+
+// extractTag generates the map from tag to metadata
+func extractTag(dataType reflect.Type) (map[string]tagInfo, []string, error) {
+	numField := dataType.NumField()
+	var ignoreFields []string
+	tagToInfo := make(map[string]tagInfo)
+
+	for i := 0; i < numField; i++ {
+		field := dataType.Field(i)
+		tagStr := field.Tag.Get(packageName)
+		if tagStr == "" {
+			continue
+		}
+
+		t, err := parseTag(tagStr)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if t.omit {
+			ignoreFields = append(ignoreFields, field.Name)
+		}
+
+		tagToInfo[t.structName] = tagInfo{tableName: t.tableName, fieldName: field.Name, foreignField: t.foreignField}
+	}
+
+	return tagToInfo, ignoreFields, nil
 }
 
 // parseTag parses the tag string into a tag struct
