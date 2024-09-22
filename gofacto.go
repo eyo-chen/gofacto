@@ -440,8 +440,14 @@ func (b *builderList[T]) SetZero(i int, fields ...string) *builderList[T] {
 
 // WihtOne set one association to the factory value.
 // Must pass a pointer to the association value.
-func (b *builder[T]) WithOne(v interface{}, ignoreFields ...string) *builder[T] {
+func (b *builder[T]) WithOne(v interface{}) *builder[T] {
 	if b.err != nil {
+		return b
+	}
+
+	_, ignoreFields, err := extractTag(reflect.TypeOf(v))
+	if err != nil {
+		b.err = err
 		return b
 	}
 
@@ -458,8 +464,14 @@ func (b *builder[T]) WithOne(v interface{}, ignoreFields ...string) *builder[T] 
 
 // WihtOne set one association to the factory value.
 // Must pass a pointer to the association value.
-func (b *builderList[T]) WithOne(v interface{}, ignoreFields ...string) *builderList[T] {
+func (b *builderList[T]) WithOne(v interface{}) *builderList[T] {
 	if b.err != nil {
+		return b
+	}
+
+	_, ignoreFields, err := extractTag(reflect.TypeOf(v))
+	if err != nil {
+		b.err = err
 		return b
 	}
 
@@ -476,8 +488,14 @@ func (b *builderList[T]) WithOne(v interface{}, ignoreFields ...string) *builder
 
 // WithMany set many associations to the factory value.
 // Must pass a pointer to the association value.
-func (b *builderList[T]) WithMany(values []interface{}, ignoreFields ...string) *builderList[T] {
+func (b *builderList[T]) WithMany(values []interface{}) *builderList[T] {
 	if b.err != nil {
+		return b
+	}
+
+	_, ignoreFields, err := extractTag(reflect.TypeOf(values[0]))
+	if err != nil {
+		b.err = err
 		return b
 	}
 
@@ -503,76 +521,4 @@ func (b *builderList[T]) WithMany(values []interface{}, ignoreFields ...string) 
 	}
 
 	return b
-}
-
-// setAss sets and inserts the associations
-func (b *builder[T]) setAss() error {
-	// insert the associations
-	if err := b.f.insertAss(b.ctx); err != nil {
-		return err
-	}
-
-	// set the connection between the factory value and the associations
-	for name, vals := range b.f.associations {
-		// use vs[0] because we can make sure setAss(builder) only invoke with Build function
-		// which means there's only one factory value
-		// so that each associations only allow one value
-		t := b.f.tagToInfo[name]
-		if err := setForeignKey(b.v, t.fieldName, vals[0]); err != nil {
-			return err
-		}
-
-		// set the foreign field value if it's provided
-		if t.foreignField != "" {
-			if err := setField(b.v, t.foreignField, vals[0]); err != nil {
-				return err
-			}
-		}
-	}
-
-	// clear associations
-	b.f.associations = map[string][]interface{}{}
-
-	return nil
-}
-
-// setAss sets and inserts the associations
-func (b *builderList[T]) setAss() error {
-	// insert the associations
-	if err := b.f.insertAss(b.ctx); err != nil {
-		return err
-	}
-
-	// set the connection between the factory value and the associations
-	// use cachePrev because multiple values can have one association value
-	// e.g. multiple transaction belongs to one user
-	cachePrev := map[string]interface{}{}
-	for i, l := range b.list {
-		for name, vs := range b.f.associations {
-			var v interface{}
-			if i >= len(vs) {
-				v = cachePrev[name]
-			} else {
-				v = vs[i]
-				cachePrev[name] = vs[i]
-			}
-
-			t := b.f.tagToInfo[name]
-			if err := setForeignKey(l, t.fieldName, v); err != nil {
-				return err
-			}
-
-			// set the foreign field value if it's provided
-			if t.foreignField != "" {
-				if err := setField(l, t.foreignField, v); err != nil {
-					return err
-				}
-			}
-		}
-	}
-
-	// clear associations
-	b.f.associations = map[string][]interface{}{}
-
-	return nil
 }
