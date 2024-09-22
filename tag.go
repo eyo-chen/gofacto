@@ -9,48 +9,50 @@ import (
 
 // tag represents the metadata parsed from the custom tag
 type tag struct {
+	fieldName    string
 	structName   string
 	tableName    string
 	foreignField string
 	omit         bool
 }
 
-// extractTag generates the map from tag to metadata
+// extractTag extracts the tag metadata from the struct type
 func extractTag(dataType reflect.Type) (map[string]tagInfo, []string, error) {
-	numField := dataType.NumField()
 	var ignoreFields []string
 	tagToInfo := make(map[string]tagInfo)
 
-	for i := 0; i < numField; i++ {
-		field := dataType.Field(i)
-		tagStr := field.Tag.Get(packageName)
-		if tagStr == "" {
-			continue
-		}
-
-		t, err := parseTag(tagStr)
-		if err != nil {
-			return nil, nil, err
+	err := processStructFields(dataType, func(t tag, hasTag bool) error {
+		if !hasTag {
+			return nil
 		}
 
 		if t.omit {
-			ignoreFields = append(ignoreFields, field.Name)
+			ignoreFields = append(ignoreFields, t.fieldName)
 		}
 
-		tagToInfo[t.structName] = tagInfo{tableName: t.tableName, fieldName: field.Name, foreignField: t.foreignField}
+		tagToInfo[t.structName] = tagInfo{tableName: t.tableName, fieldName: t.fieldName, foreignField: t.foreignField}
+		return nil
+	})
+	if err != nil {
+		return nil, nil, err
 	}
 
 	return tagToInfo, ignoreFields, nil
 }
 
 // parseTag parses the tag string into a tag struct
-func parseTag(tagStr string) (tag, error) {
-	parts := strings.Split(tagStr, ";")
-	if len(parts) == 0 {
-		return tag{}, errTagFormat
+func parseTag(field reflect.StructField) (tag, bool, error) {
+	tagStr := field.Tag.Get(packageName)
+	if tagStr == "" {
+		return tag{}, false, nil
 	}
 
-	var t tag
+	parts := strings.Split(tagStr, ";")
+	if len(parts) == 0 {
+		return tag{}, false, errTagFormat
+	}
+
+	t := tag{fieldName: field.Name}
 	for _, part := range parts {
 		if part == "omit" {
 			t.omit = true
@@ -59,7 +61,7 @@ func parseTag(tagStr string) (tag, error) {
 
 		subParts := strings.Split(part, ",")
 		if subParts[0] != "foreignKey" {
-			return tag{}, errTagFormat
+			return tag{}, false, errTagFormat
 		}
 
 		for _, subPart := range subParts[1:] {
@@ -72,7 +74,7 @@ func parseTag(tagStr string) (tag, error) {
 			case "field":
 				t.foreignField = kv[1]
 			default:
-				return tag{}, errTagFormat
+				return tag{}, false, errTagFormat
 			}
 		}
 	}
@@ -81,5 +83,21 @@ func parseTag(tagStr string) (tag, error) {
 		t.tableName = utils.CamelToSnake(t.structName) + "s"
 	}
 
-	return t, nil
+	return t, true, nil
+}
+
+// processStructFields applies a given function to each field of a struct type
+func processStructFields(typ reflect.Type, fn func(tag tag, hasTag bool) error) error {
+	numField := typ.NumField()
+	for i := 0; i < numField; i++ {
+		field := typ.Field(i)
+		t, hasTag, err := parseTag(field)
+		if err != nil {
+			return err
+		}
+		if err := fn(t, hasTag); err != nil {
+			return err
+		}
+	}
+	return nil
 }
