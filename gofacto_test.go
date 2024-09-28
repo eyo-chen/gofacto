@@ -2573,9 +2573,6 @@ func setZero_OnBuilderListMany(t *testing.T) {
 	}
 }
 
-// TODO:
-// 1. when on builder with multi level association, insert successfully
-// 2. dag with cycle, return error
 func TestWithOne(t *testing.T) {
 	for _, fn := range map[string]func(*testing.T){
 		"when on builder, insert successfully":                       withOne_OnBuilder,
