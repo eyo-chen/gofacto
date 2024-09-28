@@ -1,15 +1,20 @@
 package typeconv
 
+import (
+	"reflect"
+)
+
 // ToAnysWithOW converts the given number of values to a slice of pointers of given type with the given one overwrite.
 func ToAnysWithOW[T any](i int, ow *T) []interface{} {
 	res := make([]interface{}, i)
 	for k := 0; k < i; k++ {
+		var v T
 		if ow != nil {
-			res[k] = ow
+			copyValues(&v, *ow)
+			res[k] = &v
 			continue
 		}
 
-		var v T
 		res[k] = &v
 	}
 
@@ -21,11 +26,14 @@ func ToAnysWithOWs[T any](i int, ows ...*T) []interface{} {
 	res := make([]interface{}, i)
 	for k := 0; k < i; k++ {
 		var v T
-		res[k] = &v
 
 		if ows != nil && k < len(ows) {
-			res[k] = ows[k]
+			copyValues(&v, *ows[k])
+			res[k] = &v
+			continue
 		}
+
+		res[k] = &v
 	}
 
 	return res
@@ -49,4 +57,20 @@ func ToPointerT[T any](vals []interface{}) []*T {
 	}
 
 	return res
+}
+
+func copyValues[T any](dest *T, src T) error {
+	destValue := reflect.ValueOf(dest).Elem()
+	srcValue := reflect.ValueOf(src)
+
+	for i := 0; i < destValue.NumField(); i++ {
+		destField := destValue.Field(i)
+		srcField := srcValue.FieldByName(destValue.Type().Field(i).Name)
+
+		if srcField.IsValid() && destField.Type() == srcField.Type() && !srcField.IsZero() {
+			destField.Set(srcField)
+		}
+	}
+
+	return nil
 }
