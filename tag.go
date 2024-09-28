@@ -17,9 +17,8 @@ type tag struct {
 }
 
 // extractTag extracts the tag metadata from the struct type
-func extractTag(dataType reflect.Type) (map[string]tagInfo, []string, error) {
+func extractTag(dataType reflect.Type) ([]string, error) {
 	var ignoreFields []string
-	tagToInfo := make(map[string]tagInfo)
 
 	err := processStructFields(dataType, func(t tag, hasTag bool) error {
 		if !hasTag {
@@ -30,14 +29,33 @@ func extractTag(dataType reflect.Type) (map[string]tagInfo, []string, error) {
 			ignoreFields = append(ignoreFields, t.fieldName)
 		}
 
-		tagToInfo[t.structName] = tagInfo{tableName: t.tableName, fieldName: t.fieldName, foreignField: t.foreignField}
 		return nil
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return tagToInfo, ignoreFields, nil
+	return ignoreFields, nil
+}
+
+// processStructFields applies a given function to each field of a struct type
+func processStructFields(typ reflect.Type, fn func(tag tag, hasTag bool) error) error {
+	if typ.Kind() == reflect.Ptr {
+		typ = typ.Elem()
+	}
+
+	numField := typ.NumField()
+	for i := 0; i < numField; i++ {
+		field := typ.Field(i)
+		t, hasTag, err := parseTag(field)
+		if err != nil {
+			return err
+		}
+		if err := fn(t, hasTag); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // parseTag parses the tag string into a tag struct
@@ -84,20 +102,4 @@ func parseTag(field reflect.StructField) (tag, bool, error) {
 	}
 
 	return t, true, nil
-}
-
-// processStructFields applies a given function to each field of a struct type
-func processStructFields(typ reflect.Type, fn func(tag tag, hasTag bool) error) error {
-	numField := typ.NumField()
-	for i := 0; i < numField; i++ {
-		field := typ.Field(i)
-		t, hasTag, err := parseTag(field)
-		if err != nil {
-			return err
-		}
-		if err := fn(t, hasTag); err != nil {
-			return err
-		}
-	}
-	return nil
 }

@@ -8,104 +8,274 @@ import (
 	"github.com/eyo-chen/gofacto/internal/db"
 )
 
-// setAssValue sets the value to the associations value
-func (f *Factory[T]) setAssValue(v interface{}, ignoreFields []string) error {
-	if err := checkAssoc(v); err != nil {
-		return err
-	}
-
-	// check if it's existed in tagToInfo
-	name := reflect.TypeOf(v).Elem().Name()
-	if _, ok := f.tagToInfo[name]; !ok {
-		return fmt.Errorf("type %s, value %v: %w", name, v, errNotFoundAtTag)
-	}
-
-	f.setNonZeroValues(v, ignoreFields)
-	return nil
+// assocNode is the association node.
+// Each node contains it's metadata and the list of foreign key references
+type assocNode struct {
+	name         string
+	vals         []interface{}
+	tableName    string
+	ignoreFields []string
+	dependencies []fkRef
 }
 
-// insertAss inserts the associations value into the database
-func (f *Factory[T]) insertAss(ctx context.Context) error {
-	for name, vals := range f.associations {
-		tableName := f.tagToInfo[name].tableName
-		if _, err := f.db.InsertList(ctx, db.InsertListParams{StorageName: tableName, Values: vals}); err != nil {
-			return err
-		}
-	}
-
-	return nil
+// fkRef is the foreign key reference
+type fkRef struct {
+	vals         []interface{}
+	tableName    string
+	fieldName    string
+	foreignField string
 }
 
-// setAss sets and inserts the associations
-func (b *builder[T]) setAss() error {
-	// insert the associations
-	if err := b.f.insertAss(b.ctx); err != nil {
-		return err
-	}
-
-	// set the connection between the factory value and the associations
-	for name, vals := range b.f.associations {
-		// use vs[0] because we can make sure setAss(builder) only invoke with Build function
-		// which means there's only one factory value
-		// so that each associations only allow one value
-		t := b.f.tagToInfo[name]
-		if err := setForeignKey(b.v, t.fieldName, vals[0]); err != nil {
-			return err
-		}
-
-		// set the foreign field value if it's provided
-		if t.foreignField != "" {
-			if err := setField(b.v, t.foreignField, vals[0]); err != nil {
-				return err
-			}
-		}
-	}
-
-	// clear associations
-	b.f.associations = map[string][]interface{}{}
-
-	return nil
+// nodeInfo is used to store the information of a node for later reference.
+//
+// e.g. "User" -> {vals: [User1, User2, User3], tableName: "users"}
+type nodeInfo struct {
+	vals      []interface{}
+	tableName string
 }
 
-// setAss sets and inserts the associations
-func (b *builderList[T]) setAss() error {
-	// insert the associations
-	if err := b.f.insertAss(b.ctx); err != nil {
-		return err
+func (b *builder[T]) insertWithAssoc(ctx context.Context) (T, error) {
+	// add factory value into association
+	b.f.associations = append(b.f.associations, []interface{}{b.v})
+
+	res, err := b.f.prepareAndInsertAssoc(ctx)
+	if err != nil {
+		return b.f.empty, err
 	}
 
-	// set the connection between the factory value and the associations
-	// use cachePrev because multiple values can have one association value
-	// e.g. multiple transaction belongs to one user
-	cachePrev := map[string]interface{}{}
-	for i, l := range b.list {
-		for name, vs := range b.f.associations {
-			var v interface{}
-			if i >= len(vs) {
-				v = cachePrev[name]
-			} else {
-				v = vs[i]
-				cachePrev[name] = vs[i]
-			}
+	v, ok := res[0].(*T)
+	if !ok {
+		return b.f.empty, errCantCvtToPtr
+	}
 
-			t := b.f.tagToInfo[name]
-			if err := setForeignKey(l, t.fieldName, v); err != nil {
-				return err
-			}
+	return *v, nil
+}
 
-			// set the foreign field value if it's provided
-			if t.foreignField != "" {
-				if err := setField(l, t.foreignField, v); err != nil {
-					return err
+func (b *builderList[T]) insertWithAssoc(ctx context.Context) ([]T, error) {
+	// add factory value into association
+	vals := make([]interface{}, len(b.list))
+	for i, v := range b.list {
+		vals[i] = v
+	}
+	b.f.associations = append(b.f.associations, vals)
+
+	res, err := b.f.prepareAndInsertAssoc(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	ts := make([]T, len(res))
+	for i, val := range res {
+		v, ok := val.(*T)
+		if !ok {
+			return nil, errCantCvtToPtr
+		}
+
+		ts[i] = *v
+	}
+
+	return ts, nil
+}
+
+// prepareAndInsertAssoc handles the preparation and insertion of associations
+func (f *Factory[T]) prepareAndInsertAssoc(ctx context.Context) ([]interface{}, error) {
+	// create node info map
+	nodeInfoMap, err := f.genNodeInfoMap()
+	if err != nil {
+		return nil, err
+	}
+
+	// generate deep association nodes
+	deepAssoc, err := f.genAssocNodes(nodeInfoMap)
+	if err != nil {
+		return nil, err
+	}
+
+	// insert the deep association nodes into the database
+	return f.insertAssocNode(ctx, deepAssoc)
+}
+
+// insertAssocNode inserts the association nodes into the database.
+// It first sets the foreign key fields for each node, then insert the node into the database.
+func (f *Factory[T]) insertAssocNode(ctx context.Context, nodes []assocNode) ([]interface{}, error) {
+	var fVal []interface{}
+
+	// each node might have multiple values and dependencies
+	// e.g. SubCategory have User and MainCategory
+	// for each subCategory, has to set the foreign key fields for User and MainCategory
+	// cache is used to handle the case when the dependency is less than the number of values
+	// e.g. SubCategory*3, User*2, MainCategory*1
+	// for the 1st SubCategory, set the foreign key fields for User1 and MainCategory1
+	// for the 2nd SubCategory, set the foreign key fields for User2 and MainCategory1
+	// for the 3rd SubCategory, set the foreign key fields for User2 and MainCategory1
+	// nodes are guaranteed to have correct oreder
+	// 1. user is populated with random values, and insert into db
+	// 2. mainCategory is populated with random values, and insert into db
+	// 3. subCategory is populated with random values, and insert into db
+	for _, node := range nodes {
+		cache := map[string]interface{}{}
+		for i, v := range node.vals {
+			for _, dep := range node.dependencies {
+				var d interface{}
+				if i >= len(dep.vals) {
+					d = cache[dep.fieldName]
+				} else {
+					d = dep.vals[i]
+					cache[dep.fieldName] = d
+				}
+
+				if d == nil {
+					continue
+				}
+
+				// set the foreign key field
+				if err := setForeignKey(v, dep.fieldName, d); err != nil {
+					return nil, err
+				}
+				if dep.foreignField != "" {
+					if err := setField(v, dep.foreignField, d); err != nil {
+						return nil, err
+					}
 				}
 			}
+
+			f.setNonZeroValues(v, node.ignoreFields)
+			f.index++
+		}
+
+		res, err := f.db.InsertList(ctx, db.InsertListParams{StorageName: node.tableName, Values: node.vals})
+		if err != nil {
+			return nil, err
+		}
+
+		// if the node is the factory value, set the fVal, and return later
+		if node.name == reflect.TypeOf(f.empty).Name() {
+			fVal = res
 		}
 	}
 
-	// clear associations
-	b.f.associations = map[string][]interface{}{}
+	return fVal, nil
+}
 
-	return nil
+// genNodeInfoMap generates the node info map
+func (f *Factory[T]) genNodeInfoMap() (map[string]nodeInfo, error) {
+	nodeInfoMap := make(map[string]nodeInfo)
+
+	// it's guaranteed that the each element in the 1D slice is same type
+	// so we can use the 1st element to get the type
+	// along with the iteration, we only cares two things:
+	// (1) vals: the vals in each iteration
+	// (2) tableName: can only know when processing the fields of the struct
+	// note that tableName is only found out in other's struct fields
+	// e.g. SubCategory has User, we can only know the tableName of User when processing the fields of SubCategory
+	for _, vals := range f.associations {
+		val := vals[0]
+		typ := reflect.TypeOf(val).Elem()
+		name := typ.Name()
+		updateNodeInfoMap(nodeInfoMap, vals, name, "") // update the vals field
+		err := processStructFields(typ, func(t tag, hasTag bool) error {
+			if t.omit || !hasTag {
+				return nil
+			}
+
+			updateNodeInfoMap(nodeInfoMap, nil, t.structName, t.tableName) // update the tableName field
+
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// add the factory value into nodeInfoMap
+	// the last element is guaranteed to be the factory value
+	// it's implemented by the caller to avoid passing unnecessary vals
+	// the logic here is tricky but necessary
+	// because the factory value is not referenced by other association values
+	// e.g. SubCategory*3, User*2, MainCategory*1
+	// the factory value(SubCategory) is not referenced by other association values
+	// so we have to manually add it's info into the nodeInfoMap
+	name := reflect.TypeOf(f.empty).Name()
+	nodeInfoMap[name] = nodeInfo{
+		tableName: f.storageName,
+		vals:      f.associations[len(f.associations)-1],
+	}
+
+	return nodeInfoMap, nil
+}
+
+// updateNodeInfoMap updates the node info map
+func updateNodeInfoMap(nodeInfoMap map[string]nodeInfo, vals []interface{}, name, tableName string) {
+	if info, ok := nodeInfoMap[name]; ok {
+		if len(vals) > 0 {
+			info.vals = vals
+		}
+
+		if tableName != "" {
+			info.tableName = tableName
+		}
+
+		nodeInfoMap[name] = info
+	} else {
+		nodeInfoMap[name] = nodeInfo{
+			vals:      vals,
+			tableName: tableName,
+		}
+	}
+}
+
+// genAssocNodes returns the association nodes in topological order
+// If there's a cycle dependency, it returns an error
+func (f *Factory[T]) genAssocNodes(nodeInfoMap map[string]nodeInfo) ([]assocNode, error) {
+	d := newDAG()
+
+	// it's guaranteed that the each element in the 1D slice is same type
+	// so we can use the 1st element to get the type
+	for _, vals := range f.associations {
+		typ := reflect.TypeOf(vals[0]).Elem()
+		name := typ.Name()
+
+		deepAssoc := assocNode{
+			name:      name,
+			vals:      vals,
+			tableName: nodeInfoMap[name].tableName,
+		}
+
+		// process the fields to find out the dependencies
+		err := processStructFields(typ, func(t tag, hasTag bool) error {
+			if !hasTag {
+				return nil
+			}
+
+			if t.omit {
+				deepAssoc.ignoreFields = append(deepAssoc.ignoreFields, t.fieldName)
+				return nil
+			}
+
+			deepAssoc.dependencies = append(deepAssoc.dependencies, fkRef{
+				vals:         nodeInfoMap[t.structName].vals,
+				tableName:    t.tableName,
+				fieldName:    t.fieldName,
+				foreignField: t.foreignField,
+			})
+
+			// e.g. User(fk) -> SubCategory
+			d.addEdge(t.structName, name)
+			return nil
+		})
+
+		if err != nil {
+			return nil, err
+		}
+
+		d.addNode(deepAssoc)
+	}
+
+	if d.hasCycle() {
+		return nil, errCycleDependency
+	}
+
+	return d.topologicalSort(), nil
 }
 
 // setForeignKey sets the value of the source's ID field to the target's foreign key(name) field
@@ -229,6 +399,26 @@ func checkAssoc(v interface{}) error {
 	if typeOfV.Elem().Kind() != reflect.Struct {
 		name := typeOfV.Elem().Name()
 		return fmt.Errorf("%s, %v: %w", name, v, errIsNotStructPtr)
+	}
+
+	return nil
+}
+
+// checkAssocs checks if the input association values are valid
+func checkAssocs(vals []interface{}) error {
+	var name string
+	for _, v := range vals {
+		if err := checkAssoc(v); err != nil {
+			return err
+		}
+
+		// check if the type of the value is the same as the previous value
+		curValName := reflect.TypeOf(v).Elem().Name()
+		if name != "" && name != curValName {
+			return errValueNotTheSameType
+		}
+
+		name = curValName
 	}
 
 	return nil
