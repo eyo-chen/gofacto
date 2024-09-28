@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"reflect"
 	"testing"
 	"time"
@@ -55,9 +56,19 @@ func setIDField(val reflect.Value) error {
 	if !idField.IsValid() {
 		return errors.New("ID field not found")
 	}
-	idField.SetInt(1)
+	randomID := rand.Intn(1000) + 1
+	idField.SetInt(int64(randomID))
 
 	return nil
+}
+
+// testAssocStruct is a struct with a foreign key to test the association functionality.
+type testAssocStruct struct {
+	ID            int
+	ForeignKey    int  `gofacto:"foreignKey,struct:testStructWithID,field:ForeignValue"`
+	ForeignKey2   *int `gofacto:"foreignKey,struct:testStructWithID2,field:ForeignValue2,table:test_struct_with_id2s"`
+	ForeignValue  testStructWithID
+	ForeignValue2 *testStructWithID2
 }
 
 // testStructWithID is a struct with an ID field to test the insert functionality.
@@ -68,18 +79,26 @@ type testStructWithID struct {
 // testStructWithID2 is a struct with an ID field to test the association functionality.
 // This is for testing foreign field with pointer struct.
 type testStructWithID2 struct {
+	ID           int
+	ForeignKey   int `gofacto:"foreignKey,struct:testStructWithID3,field:ForeignValue"`
+	ForeignValue testStructWithID3
+	Name         string
+}
+
+// testStructWithID3 is a struct with an ID field to test the association functionality.
+type testStructWithID3 struct {
 	ID   int
 	Name string
 }
 
-// testAssocStruct is a struct with a foreign key to test the association functionality.
-type testAssocStruct struct {
-	ID          int
-	ForeignKey  int  `gofacto:"foreignKey,struct:testStructWithID,field:ForeignValue"`
-	ForeignKey2 *int `gofacto:"foreignKey,struct:testStructWithID2,field:ForeignValue2,table:test_struct_with_id2s"`
+type testStructWithCycle struct {
+	ID         int
+	ForeignKey int `gofacto:"foreignKey,struct:testStructWithCycle2"`
+}
 
-	ForeignValue  testStructWithID
-	ForeignValue2 *testStructWithID2
+type testStructWithCycle2 struct {
+	ID         int
+	ForeignKey int `gofacto:"foreignKey,struct:testStructWithCycle"`
 }
 
 // customType is a custom type to test the custom type functionality.
@@ -152,7 +171,6 @@ func new_NoConfig(t *testing.T) {
 	want := &Factory[testStruct]{
 		dataType:       reflect.TypeOf(testStruct{}),
 		storageName:    "test_structs",
-		tagToInfo:      map[string]tagInfo{},
 		ignoreFields:   []string{},
 		index:          1,
 		isSetZeroValue: true,
@@ -173,12 +191,12 @@ func new_WithBlueprint(t *testing.T) {
 	got := New(testStruct{}).WithBlueprint(blueprint)
 
 	want := &Factory[testStruct]{
-		blueprint:      blueprint,
-		dataType:       reflect.TypeOf(testStruct{}),
-		empty:          testStruct{},
-		associations:   map[string][]interface{}{},
-		storageName:    "test_structs",
-		tagToInfo:      map[string]tagInfo{},
+		blueprint:    blueprint,
+		dataType:     reflect.TypeOf(testStruct{}),
+		empty:        testStruct{},
+		associations: [][]interface{}{},
+		storageName:  "test_structs",
+
 		ignoreFields:   []string{},
 		index:          1,
 		isSetZeroValue: true,
@@ -196,7 +214,6 @@ func new_WithStorageName(t *testing.T) {
 	want := &Factory[testStruct]{
 		dataType:       reflect.TypeOf(testStruct{}),
 		storageName:    "test_storage",
-		tagToInfo:      map[string]tagInfo{},
 		ignoreFields:   []string{},
 		index:          1,
 		isSetZeroValue: true,
@@ -212,9 +229,9 @@ func new_WithDB(t *testing.T) {
 	got := New(testStruct{}).WithDB(db)
 
 	want := &Factory[testStruct]{
-		dataType:       reflect.TypeOf(testStruct{}),
-		storageName:    "test_structs",
-		tagToInfo:      map[string]tagInfo{},
+		dataType:    reflect.TypeOf(testStruct{}),
+		storageName: "test_structs",
+
 		ignoreFields:   []string{},
 		index:          1,
 		isSetZeroValue: true,
@@ -230,9 +247,9 @@ func new_WithIsSetZeroValue(t *testing.T) {
 	got := New(testStruct{}).WithIsSetZeroValue(false)
 
 	want := &Factory[testStruct]{
-		dataType:       reflect.TypeOf(testStruct{}),
-		storageName:    "test_structs",
-		tagToInfo:      map[string]tagInfo{},
+		dataType:    reflect.TypeOf(testStruct{}),
+		storageName: "test_structs",
+
 		ignoreFields:   []string{},
 		index:          1,
 		isSetZeroValue: false,
@@ -249,9 +266,9 @@ func new_WithTrait(t *testing.T) {
 	got := New(testStruct{}).WithTrait("test", trait)
 
 	want := &Factory[testStruct]{
-		dataType:       reflect.TypeOf(testStruct{}),
-		storageName:    "test_structs",
-		tagToInfo:      map[string]tagInfo{},
+		dataType:    reflect.TypeOf(testStruct{}),
+		storageName: "test_structs",
+
 		ignoreFields:   []string{},
 		index:          1,
 		isSetZeroValue: true,
@@ -269,12 +286,8 @@ func new_CorrectTagFormat(t *testing.T) {
 	got := New(testAssocStruct{})
 
 	want := &Factory[testAssocStruct]{
-		dataType:    reflect.TypeOf(testAssocStruct{}),
-		storageName: "test_assoc_structs",
-		tagToInfo: map[string]tagInfo{
-			"testStructWithID":  {tableName: "test_struct_with_ids", fieldName: "ForeignKey", foreignField: "ForeignValue"},
-			"testStructWithID2": {tableName: "test_struct_with_id2s", fieldName: "ForeignKey2", foreignField: "ForeignValue2"},
-		},
+		dataType:       reflect.TypeOf(testAssocStruct{}),
+		storageName:    "test_assoc_structs",
 		ignoreFields:   []string{},
 		index:          1,
 		isSetZeroValue: true,
@@ -605,12 +618,12 @@ func build_BluePrintNotSetZeroValues(t *testing.T) {
 		{
 			desc: "second build",
 			want: func() testStruct {
-				i2, i4 := 2, 4
-				str := "test2"
+				i1, i2 := 1, 2
+				str := "test1"
 
 				return testStruct{
-					Int:    i4,
-					PtrInt: &i2,
+					Int:    i2,
+					PtrInt: &i1,
 					Str:    str,
 					PtrStr: &str,
 				}
@@ -626,6 +639,8 @@ func build_BluePrintNotSetZeroValues(t *testing.T) {
 			}
 
 			if err := testutils.CompareVal(got, tt.want()); err != nil {
+				fmt.Println("got", got.Int)
+				fmt.Println("want", tt.want().Int)
 				t.Fatal(err.Error())
 			}
 		})
@@ -1054,8 +1069,8 @@ func buildList_BluePrintNotSetZeroValues(t *testing.T) {
 		{
 			desc: "first build",
 			want: func() []testStruct {
-				i1, i2, i3, i4 := 1, 2, 3, 4
-				str1, str2 := "test1", "test2"
+				i1, i2 := 1, 2
+				str1 := "test1"
 
 				return []testStruct{
 					{
@@ -1064,9 +1079,9 @@ func buildList_BluePrintNotSetZeroValues(t *testing.T) {
 						SlicePtrStruct: []*subStruct{{ID: i1, Name: str1}, {ID: i2, Name: str1}},
 					},
 					{
-						Int:            i4,
-						PtrStruct:      &subStruct{ID: i2, Name: str2},
-						SlicePtrStruct: []*subStruct{{ID: i2, Name: str2}, {ID: i3, Name: str2}},
+						Int:            i2,
+						PtrStruct:      &subStruct{ID: i1, Name: str1},
+						SlicePtrStruct: []*subStruct{{ID: i1, Name: str1}, {ID: i2, Name: str1}},
 					},
 				}
 			},
@@ -1074,19 +1089,19 @@ func buildList_BluePrintNotSetZeroValues(t *testing.T) {
 		{
 			desc: "second build",
 			want: func() []testStruct {
-				i3, i4, i5, i6, i8 := 3, 4, 5, 6, 8
-				str3, str4 := "test3", "test4"
+				i1, i2 := 1, 2
+				str1 := "test1"
 
 				return []testStruct{
 					{
-						Int:            i6,
-						PtrStruct:      &subStruct{ID: i3, Name: str3},
-						SlicePtrStruct: []*subStruct{{ID: i3, Name: str3}, {ID: i4, Name: str3}},
+						Int:            i2,
+						PtrStruct:      &subStruct{ID: i1, Name: str1},
+						SlicePtrStruct: []*subStruct{{ID: i1, Name: str1}, {ID: i2, Name: str1}},
 					},
 					{
-						Int:            i8,
-						PtrStruct:      &subStruct{ID: i4, Name: str4},
-						SlicePtrStruct: []*subStruct{{ID: i4, Name: str4}, {ID: i5, Name: str4}},
+						Int:            i2,
+						PtrStruct:      &subStruct{ID: i1, Name: str1},
+						SlicePtrStruct: []*subStruct{{ID: i1, Name: str1}, {ID: i2, Name: str1}},
 					},
 				}
 			},
@@ -1260,15 +1275,13 @@ func TestInsert(t *testing.T) {
 func insert_OnBuilderWithDB(t *testing.T) {
 	f := New(testStructWithID{}).WithDB(&mockDB{})
 
-	want := testStructWithID{ID: 1}
-
 	val, err := f.Build(mockCTX).Insert()
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
 
-	if testutils.CompareVal(val, want) != nil {
-		t.Fatalf("got: %v, want: %v", val, want)
+	if err := testutils.IsNotZeroVal(val); err != nil {
+		t.Fatal(err.Error())
 	}
 }
 
@@ -1307,15 +1320,13 @@ func insert_OnBuilderWithErr(t *testing.T) {
 func insert_OnBuilderListWithDB(t *testing.T) {
 	f := New(testStructWithID{}).WithDB(&mockDB{})
 
-	want := []testStructWithID{{ID: 1}, {ID: 1}}
-
 	val, err := f.BuildList(mockCTX, 2).Insert()
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
 
-	if testutils.CompareVal(val, want) != nil {
-		t.Fatalf("got: %v, want: %v", val, want)
+	if err := testutils.IsNotZeroVal(val); err != nil {
+		t.Fatal(err.Error())
 	}
 }
 
@@ -2564,16 +2575,18 @@ func setZero_OnBuilderListMany(t *testing.T) {
 
 func TestWithOne(t *testing.T) {
 	for _, fn := range map[string]func(*testing.T){
-		"when on builder, insert successfully":                      withOne_OnBuilder,
-		"when on builder not pass ptr, return error":                withOne_OnBuilderNotPassPtr,
-		"when on builder not pass struct, return error":             withOne_OnBuilderNotPassStruct,
-		"when on builder not pass struct in tag, return error":      withOne_OnBuilderNotPassStructInTag,
-		"when on builder with err, return error":                    withOne_OnBuilderWithErr,
-		"when on builder list, insert successfully":                 withOne_OnBuilderList,
-		"when on builder list not pass ptr, return error":           withOne_OnBuilderListNotPassPtr,
-		"when on builder list not pass struct, return error":        withOne_OnBuilderListNotPassStruct,
-		"when on builder list not pass struct in tag, return error": withOne_OnBuilderListNotPassStructInTag,
-		"when on builder list with err, return error":               withOne_OnBuilderListWithErr,
+		"when on builder, insert successfully":                       withOne_OnBuilder,
+		"when on builder with multi level, insert successfully":      withOne_OnBuilderMultiLevel,
+		"when on builder not pass ptr, return error":                 withOne_OnBuilderNotPassPtr,
+		"when on builder not pass struct, return error":              withOne_OnBuilderNotPassStruct,
+		"when on builder with err, return error":                     withOne_OnBuilderWithErr,
+		"when on builder with cycle, return error":                   withOne_OnBuilderWithCycle,
+		"when on builder list, insert successfully":                  withOne_OnBuilderList,
+		"when on builder list with multi level, insert successfully": withOne_OnBuilderListMultiLevel,
+		"when on builder list not pass ptr, return error":            withOne_OnBuilderListNotPassPtr,
+		"when on builder list not pass struct, return error":         withOne_OnBuilderListNotPassStruct,
+		"when on builder list with err, return error":                withOne_OnBuilderListWithErr,
+		"when on builder list with cycle, return error":              withOne_OnBuilderListWithCycle,
 	} {
 		t.Run(testutils.GetFunName(fn), func(t *testing.T) {
 			fn(t)
@@ -2595,8 +2608,8 @@ func withOne_OnBuilder(t *testing.T) {
 		t.Fatalf("ForeignKey should be %v", assVal.ID)
 	}
 
-	if val.ForeignKey2 != nil && *val.ForeignKey2 != assVal.ID {
-		t.Fatalf("ForeignKey2 should be %v", assVal.ID)
+	if val.ForeignKey2 != nil && *val.ForeignKey2 != assVal2.ID {
+		t.Fatalf("ForeignKey2 should be %v", assVal2.ID)
 	}
 
 	if err := testutils.CompareVal(val.ForeignValue, assVal); err != nil {
@@ -2604,6 +2617,43 @@ func withOne_OnBuilder(t *testing.T) {
 	}
 
 	if err := testutils.CompareVal(val.ForeignValue2, &assVal2); err != nil {
+		t.Fatal(err.Error())
+	}
+}
+
+func withOne_OnBuilderMultiLevel(t *testing.T) {
+	f := New(testAssocStruct{}).WithDB(&mockDB{})
+
+	assVal := testStructWithID{}
+	assVal2 := testStructWithID2{}
+	assVal3 := testStructWithID3{}
+
+	val, err := f.Build(mockCTX).
+		WithOne(&assVal, &assVal2, &assVal3).
+		Insert()
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+
+	if val.ForeignKey != assVal.ID {
+		t.Fatalf("ForeignKey should be %v", assVal.ID)
+	}
+	if val.ForeignKey2 != nil && *val.ForeignKey2 != assVal2.ID {
+		t.Fatalf("ForeignKey2 should be %v", assVal2.ID)
+	}
+
+	if err := testutils.CompareVal(val.ForeignValue, assVal); err != nil {
+		t.Fatal(err.Error())
+	}
+	if err := testutils.CompareVal(val.ForeignValue2, &assVal2); err != nil {
+		t.Fatal(err.Error())
+	}
+
+	if assVal2.ForeignKey != assVal3.ID {
+		t.Fatalf("ForeignKey should be %v", assVal3.ID)
+	}
+
+	if err := testutils.CompareVal(assVal2.ForeignValue, assVal3); err != nil {
 		t.Fatal(err.Error())
 	}
 }
@@ -2641,22 +2691,6 @@ func withOne_OnBuilderNotPassStruct(t *testing.T) {
 	}
 }
 
-func withOne_OnBuilderNotPassStructInTag(t *testing.T) {
-	f := New(testAssocStruct{}).WithDB(&mockDB{})
-
-	want := testAssocStruct{}
-	wantErr := errNotFoundAtTag
-
-	val, err := f.Build(mockCTX).WithOne(&testStruct{}).Insert()
-	if !errors.Is(err, wantErr) {
-		t.Fatalf("error should be %v", wantErr)
-	}
-
-	if err := testutils.CompareVal(val, want); err != nil {
-		t.Fatal(err.Error())
-	}
-}
-
 func withOne_OnBuilderWithErr(t *testing.T) {
 	f := New(testAssocStruct{}).WithDB(&mockDB{})
 
@@ -2674,12 +2708,27 @@ func withOne_OnBuilderWithErr(t *testing.T) {
 	}
 }
 
+func withOne_OnBuilderWithCycle(t *testing.T) {
+	f := New(testStructWithCycle{}).WithDB(&mockDB{})
+
+	val, err := f.Build(mockCTX).WithOne(&testStructWithCycle2{}).Insert()
+	if !errors.Is(err, errCycleDependency) {
+		t.Fatalf("error should be %v", errCycleDependency)
+	}
+	if err := testutils.CompareVal(val, testStructWithCycle{}); err != nil {
+		t.Fatal(err.Error())
+	}
+}
+
 func withOne_OnBuilderList(t *testing.T) {
 	f := New(testAssocStruct{}).WithDB(&mockDB{})
 
 	assVal := testStructWithID{}
 	assVal2 := testStructWithID2{}
-	vals, err := f.BuildList(mockCTX, 2).WithOne(&assVal).WithOne(&assVal2).Insert()
+	vals, err := f.BuildList(mockCTX, 2).
+		WithOne(&assVal).
+		WithOne(&assVal2).
+		Insert()
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
@@ -2717,6 +2766,43 @@ func withOne_OnBuilderList(t *testing.T) {
 	}
 }
 
+func withOne_OnBuilderListMultiLevel(t *testing.T) {
+	f := New(testAssocStruct{}).WithDB(&mockDB{})
+
+	assVal := testStructWithID{}
+	assVal2 := testStructWithID2{}
+	assVal3 := testStructWithID3{}
+
+	vals, err := f.BuildList(mockCTX, 2).
+		WithOne(&assVal, &assVal2, &assVal3).
+		Insert()
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+
+	for i := 0; i < 2; i++ {
+		if vals[i].ForeignKey != assVal.ID {
+			t.Fatalf("ForeignKey should be %v", assVal.ID)
+		}
+		if vals[i].ForeignKey2 != nil && *vals[i].ForeignKey2 != assVal2.ID {
+			t.Fatalf("ForeignKey2 should be %v", assVal2.ID)
+		}
+		if err := testutils.CompareVal(vals[i].ForeignValue, assVal); err != nil {
+			t.Fatal(err.Error())
+		}
+		if err := testutils.CompareVal(vals[i].ForeignValue2, &assVal2); err != nil {
+			t.Fatal(err.Error())
+		}
+	}
+
+	if assVal2.ForeignKey != assVal3.ID {
+		t.Fatalf("ForeignKey should be %v", assVal3.ID)
+	}
+	if err := testutils.CompareVal(assVal2.ForeignValue, assVal3); err != nil {
+		t.Fatal(err.Error())
+	}
+}
+
 func withOne_OnBuilderListNotPassPtr(t *testing.T) {
 	f := New(testAssocStruct{}).WithDB(&mockDB{})
 
@@ -2750,22 +2836,6 @@ func withOne_OnBuilderListNotPassStruct(t *testing.T) {
 	}
 }
 
-func withOne_OnBuilderListNotPassStructInTag(t *testing.T) {
-	f := New(testAssocStruct{}).WithDB(&mockDB{})
-
-	want := []testAssocStruct{}
-	wantErr := errNotFoundAtTag
-
-	vals, err := f.BuildList(mockCTX, 2).WithOne(&testStruct{}).Insert()
-	if !errors.Is(err, wantErr) {
-		t.Fatalf("error should be %v", wantErr)
-	}
-
-	if err := testutils.CompareVal(vals, want); err != nil {
-		t.Fatal(err.Error())
-	}
-}
-
 func withOne_OnBuilderListWithErr(t *testing.T) {
 	f := New(testAssocStruct{}).WithDB(&mockDB{})
 
@@ -2783,13 +2853,28 @@ func withOne_OnBuilderListWithErr(t *testing.T) {
 	}
 }
 
+func withOne_OnBuilderListWithCycle(t *testing.T) {
+	f := New(testStructWithCycle{}).WithDB(&mockDB{})
+
+	var want []testStructWithCycle
+	vals, err := f.BuildList(mockCTX, 2).WithOne(&testStructWithCycle2{}).Insert()
+	if !errors.Is(err, errCycleDependency) {
+		t.Fatalf("error should be %v", errCycleDependency)
+	}
+	if err := testutils.CompareVal(vals, want); err != nil {
+		t.Fatal(err.Error())
+	}
+}
+
 func TestWithMany(t *testing.T) {
 	for _, fn := range map[string]func(*testing.T){
-		"when withMany on builder, insert successfully":                 withMany_CorrectCase,
-		"when withMany on builder not pass ptr, return error":           withMany_NotPassPtr,
-		"when withMany on builder not pass struct, return error":        withMany_NotPassStruct,
-		"when withMany on builder not pass struct in tag, return error": withMany_NotPassStructInTag,
-		"when withMany on builder with err, return error":               withMany_WithErr,
+		"when withMany on builder, insert successfully":                  withMany_CorrectCase,
+		"when withMany on builder with multi level, insert successfully": withMany_MultiLevel,
+		"when withMany on builder not pass ptr, return error":            withMany_NotPassPtr,
+		"when withMany on builder not pass struct, return error":         withMany_NotPassStruct,
+		"when withMany on builder pass diff struct, return error":        withMany_PassDiffStruct,
+		"when withMany on builder with cycle, return error":              withMany_WithCycle,
+		"when withMany on builder with err, return error":                withMany_WithErr,
 	} {
 		t.Run(testutils.GetFunName(fn), func(t *testing.T) {
 			fn(t)
@@ -2842,6 +2927,44 @@ func withMany_CorrectCase(t *testing.T) {
 	}
 }
 
+func withMany_MultiLevel(t *testing.T) {
+	f := New(testAssocStruct{}).WithDB(&mockDB{})
+
+	assVals1 := []interface{}{&testStructWithID{}, &testStructWithID{}}
+	assVals2 := []interface{}{&testStructWithID2{}, &testStructWithID2{}}
+	assVals3 := []interface{}{&testStructWithID3{}, &testStructWithID3{}}
+	vals, err := f.BuildList(mockCTX, 2).
+		WithMany(assVals1).
+		WithMany(assVals2).
+		WithMany(assVals3).
+		Insert()
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+
+	for i := 0; i < 2; i++ {
+		if vals[i].ForeignKey != assVals1[i].(*testStructWithID).ID {
+			t.Fatalf("ForeignKey should be %v", assVals1[i].(*testStructWithID).ID)
+		}
+		if vals[i].ForeignKey2 != nil && *vals[i].ForeignKey2 != assVals2[i].(*testStructWithID2).ID {
+			t.Fatalf("ForeignKey2 should be %v", assVals2[i].(*testStructWithID2).ID)
+		}
+		if err := testutils.CompareVal(vals[i].ForeignValue, *assVals1[i].(*testStructWithID)); err != nil {
+			t.Fatal(err.Error())
+		}
+		if err := testutils.CompareVal(vals[i].ForeignValue2, assVals2[i].(*testStructWithID2)); err != nil {
+			t.Fatal(err.Error())
+		}
+	}
+
+	if assVals2[0].(*testStructWithID2).ForeignKey != assVals3[0].(*testStructWithID3).ID {
+		t.Fatalf("ForeignKey should be %v", assVals3[0].(*testStructWithID3).ID)
+	}
+	if err := testutils.CompareVal(assVals2[0].(*testStructWithID2).ForeignValue, *assVals3[0].(*testStructWithID3)); err != nil {
+		t.Fatal(err.Error())
+	}
+}
+
 func withMany_NotPassPtr(t *testing.T) {
 	f := New(testAssocStruct{}).WithDB(&mockDB{})
 
@@ -2875,17 +2998,33 @@ func withMany_NotPassStruct(t *testing.T) {
 	}
 }
 
-func withMany_NotPassStructInTag(t *testing.T) {
+func withMany_PassDiffStruct(t *testing.T) {
 	f := New(testAssocStruct{}).WithDB(&mockDB{})
 
-	want := []testAssocStruct{}
-	wantErr := errNotFoundAtTag
+	assVal := testStructWithID{}
+	assVal2 := testStructWithID2{}
+	vals, err := f.BuildList(mockCTX, 2).WithMany([]interface{}{&assVal, &assVal2}).Insert()
 
-	vals, err := f.BuildList(mockCTX, 2).WithMany([]interface{}{&testStruct{}, &testStruct{}}).Insert()
-	if !errors.Is(err, wantErr) {
-		t.Fatalf("error should be %v", wantErr)
+	var want []testAssocStruct
+	if !errors.Is(err, errValueNotTheSameType) {
+		t.Fatalf("error should be %v", errValueNotTheSameType)
 	}
+	if err := testutils.CompareVal(vals, want); err != nil {
+		t.Fatal(err.Error())
+	}
+}
 
+func withMany_WithCycle(t *testing.T) {
+	f := New(testStructWithCycle{}).WithDB(&mockDB{})
+
+	vals, err := f.BuildList(mockCTX, 2).
+		WithMany([]interface{}{&testStructWithCycle2{}, &testStructWithCycle2{}}).
+		Insert()
+
+	var want []testStructWithCycle
+	if !errors.Is(err, errCycleDependency) {
+		t.Fatalf("error should be %v", errCycleDependency)
+	}
 	if err := testutils.CompareVal(vals, want); err != nil {
 		t.Fatal(err.Error())
 	}
@@ -2987,10 +3126,6 @@ func checkFactory[T any](got, want *Factory[T]) error {
 
 	if len(got.traits) != len(want.traits) {
 		return fmt.Errorf("traits should be %v", want.traits)
-	}
-
-	if testutils.CompareVal(got.tagToInfo, want.tagToInfo) != nil {
-		return fmt.Errorf("tagToInfo should be %v", want.tagToInfo)
 	}
 
 	if (got.blueprint == nil) != (want.blueprint == nil) {

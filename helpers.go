@@ -1,15 +1,10 @@
 package gofacto
 
 import (
-	"context"
 	"fmt"
 	"reflect"
 	"slices"
-	"strings"
 	"time"
-
-	"github.com/eyo-chen/gofacto/internal/db"
-	"github.com/eyo-chen/gofacto/internal/utils"
 )
 
 const (
@@ -147,43 +142,6 @@ func (f *Factory[T]) setNonZeroSlice(v interface{}, ignoreFields []string) {
 	}
 }
 
-// setAssValue sets the value to the associations value
-func (f *Factory[T]) setAssValue(v interface{}, ignoreFields []string) error {
-	typeOfV := reflect.TypeOf(v)
-
-	// check if it's a pointer
-	if typeOfV.Kind() != reflect.Ptr {
-		name := typeOfV.Name()
-		return fmt.Errorf("%s, %v: %w", name, v, errIsNotPtr)
-	}
-
-	name := typeOfV.Elem().Name()
-	// check if it's a pointer to a struct
-	if typeOfV.Elem().Kind() != reflect.Struct {
-		return fmt.Errorf("%s, %v: %w", name, v, errIsNotStructPtr)
-	}
-
-	// check if it's existed in tagToInfo
-	if _, ok := f.tagToInfo[name]; !ok {
-		return fmt.Errorf("type %s, value %v: %w", name, v, errNotFoundAtTag)
-	}
-
-	f.setNonZeroValues(v, ignoreFields)
-	return nil
-}
-
-// genAndInsertAss inserts the associations value into the database
-func (f *Factory[T]) insertAss(ctx context.Context) error {
-	for name, vals := range f.associations {
-		tableName := f.tagToInfo[name].tableName
-		if _, err := f.db.InsertList(ctx, db.InsertListParams{StorageName: tableName, Values: vals}); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 // copyValues copys non-zero values from src to dest
 func copyValues[T any](dest *T, src T) error {
 	destValue := reflect.ValueOf(dest).Elem()
@@ -253,165 +211,4 @@ func genNonZeroValue(t reflect.Type, i int) interface{} {
 	default:
 		return nil
 	}
-}
-
-// setForeignKey sets the value of the source's ID field to the target's foreign key(name) field
-func setForeignKey(target interface{}, name string, source interface{}) error {
-	targetField := reflect.ValueOf(target).Elem().FieldByName(name)
-	if !targetField.IsValid() {
-		return fmt.Errorf("%s: %w", name, errFieldNotFound)
-	}
-
-	if !targetField.CanSet() {
-		return fmt.Errorf("%s: %w", name, errFieldCantSet)
-	}
-
-	sourceIDField := reflect.ValueOf(source).Elem().FieldByName("ID")
-	if !sourceIDField.IsValid() {
-		return fmt.Errorf("%s: %w", "ID", errFieldNotFound)
-	}
-
-	sourceIDKind := sourceIDField.Kind()
-	if !isIntType(sourceIDKind) && !isUintType(sourceIDKind) {
-		return errNotInt
-	}
-
-	setIntValue(targetField, sourceIDField)
-	return nil
-}
-
-// extractTag generates the map from tag to metadata
-func extractTag(dataType reflect.Type) (map[string]tagInfo, []string, error) {
-	numField := dataType.NumField()
-	var ignoreFields []string
-	tagToInfo := make(map[string]tagInfo)
-
-	for i := 0; i < numField; i++ {
-		field := dataType.Field(i)
-		tag := field.Tag.Get(packageName)
-		if tag == "" {
-			continue
-		}
-
-		parts := strings.Split(tag, ";")
-		if len(parts) == 0 {
-			return nil, nil, errTagFormat
-		}
-
-		var structName, tableName, foreignField string
-		for _, part := range parts {
-			if part == "omit" {
-				ignoreFields = append(ignoreFields, field.Name)
-				continue
-			}
-
-			subParts := strings.Split(part, ",")
-			if subParts[0] != "foreignKey" {
-				return nil, nil, errTagFormat
-			}
-
-			for _, subPart := range subParts[1:] {
-				kv := strings.SplitN(subPart, ":", 2)
-				switch kv[0] {
-				case "struct":
-					structName = kv[1]
-				case "table":
-					tableName = kv[1]
-				case "field":
-					foreignField = kv[1]
-				default:
-					return nil, nil, errTagFormat
-				}
-			}
-		}
-
-		if tableName == "" {
-			tableName = utils.CamelToSnake(structName) + "s"
-		}
-		tagToInfo[structName] = tagInfo{tableName: tableName, fieldName: field.Name, foreignField: foreignField}
-	}
-
-	return tagToInfo, ignoreFields, nil
-}
-
-// setIntValue sets the value of the source to the target,
-// and it also handles the conversion between int and uint.
-// Normally, it's used to set the ID field of the target struct
-func setIntValue(target, source reflect.Value) {
-	if target.Kind() == reflect.Ptr {
-		target = target.Elem()
-	}
-
-	targetKind := target.Kind()
-	sourceKind := source.Kind()
-
-	if isIntType(targetKind) && isIntType(sourceKind) {
-		target.SetInt(source.Int())
-		return
-	}
-
-	if isUintType(targetKind) && isUintType(sourceKind) {
-		target.SetUint(source.Uint())
-		return
-	}
-
-	if isIntType(targetKind) {
-		target.SetInt(int64(source.Uint()))
-		return
-	}
-
-	target.SetUint(uint64(source.Int()))
-}
-
-// isIntType checks if the kind is an integer type
-func isIntType(k reflect.Kind) bool {
-	return k >= reflect.Int && k <= reflect.Int64
-}
-
-// isUintType checks if the kind is an unsigned integer type
-func isUintType(k reflect.Kind) bool {
-	return k >= reflect.Uint && k <= reflect.Uint64
-}
-
-// serField sets the value of the source to the field of the target.
-// field value of target might be a pointer or value.
-// field and source must be a pointer.
-func setField(target interface{}, fieldName string, source interface{}) error {
-	structValue := reflect.ValueOf(target).Elem()
-	fieldVal := structValue.FieldByName(fieldName)
-
-	if !fieldVal.IsValid() {
-		return fmt.Errorf("%s: %w", fieldName, errFieldNotFound)
-	}
-
-	if !fieldVal.CanSet() {
-		return fmt.Errorf("%s: %w", fieldName, errFieldCantSet)
-	}
-
-	sourceVal := reflect.ValueOf(source).Elem()
-
-	// when fieldVal is a pointer
-	if fieldVal.Kind() == reflect.Ptr {
-		// If fieldVal is nil, create a new instance
-		if fieldVal.IsNil() {
-			fieldVal.Set(reflect.New(fieldVal.Type().Elem()))
-		}
-
-		// check if the type of the pointer is the same as the source
-		if fieldVal.Type().Elem() != sourceVal.Type() {
-			return fmt.Errorf("type mismatch: field %s is %v, source is %v", fieldName, fieldVal.Type().Elem(), sourceVal.Type())
-		}
-
-		// set the value of the pointer to the source
-		fieldVal.Elem().Set(sourceVal)
-		return nil
-	}
-
-	// when fieldVal is a value
-	if fieldVal.Type() != sourceVal.Type() {
-		return fmt.Errorf("type mismatch: field %s is %v, source is %v", fieldName, fieldVal.Type(), sourceVal.Type())
-	}
-	fieldVal.Set(sourceVal)
-
-	return nil
 }

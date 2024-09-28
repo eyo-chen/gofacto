@@ -35,9 +35,6 @@ var (
 	// errTagFormat is the error representing that tag is in wrong format
 	errTagFormat = errors.New("tag is in wrong format")
 
-	// errNotFoundAtTag is the error representing that not found at tag
-	errNotFoundAtTag = errors.New("not found at tag")
-
 	// errIsNotPtr is the error representing that is not pointer
 	errIsNotPtr = errors.New("is not pointer")
 
@@ -55,4 +52,7 @@ var (
 
 	// errNotInt is the error representing that not an integer
 	errNotInt = errors.New("not an integer")
+
+	// errCycleDependency is the error representing that there is a cycle dependency
+	errCycleDependency = errors.New("cycle dependency")
 )

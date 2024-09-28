@@ -15,9 +15,33 @@ CREATE TABLE IF NOT EXISTS authors (
     profile_picture BYTEA
 );
 
+CREATE TABLE IF NOT EXISTS categories (
+    id SERIAL PRIMARY KEY,
+    author_id INTEGER,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (author_id) REFERENCES authors(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS sub_categories (
+    id SERIAL PRIMARY KEY,
+    category_id INTEGER NOT NULL,
+    author_id INTEGER,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE,
+    FOREIGN KEY (author_id) REFERENCES authors(id) ON DELETE SET NULL
+);
+
 CREATE TABLE IF NOT EXISTS books (
     id SERIAL PRIMARY KEY,
     author_id INTEGER,
+    category_id INTEGER,
+    sub_category_id INTEGER,
     title VARCHAR(255) NOT NULL,
     isbn CHAR(13) UNIQUE,
     publication_date DATE,
@@ -29,5 +53,7 @@ CREATE TABLE IF NOT EXISTS books (
     cover_image BYTEA,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (author_id) REFERENCES authors(id) ON DELETE SET NULL
+    FOREIGN KEY (author_id) REFERENCES authors(id) ON DELETE SET NULL,
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
+    FOREIGN KEY (sub_category_id) REFERENCES sub_categories(id) ON DELETE SET NULL
 );

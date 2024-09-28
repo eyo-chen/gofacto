@@ -24,13 +24,8 @@ type Factory[T any] struct {
 	// map from name to trait function
 	traits map[string]setTraiter[T]
 
-	// map from name to list of associations
-	// e.g. "User" -> []*User
-	associations map[string][]interface{}
-
-	// map from tag to metadata
-	// e.g. "User" -> {tableName: "users", fieldName: "UserID"}
-	tagToInfo map[string]tagInfo
+	// associations is a list of associations
+	associations [][]interface{}
 }
 
 // blueprintFunc is a client-defined function to create a new value
@@ -38,13 +33,6 @@ type blueprintFunc[T any] func(i int) T
 
 // setTraiter is a client-defined function to add a trait to mutate the value
 type setTraiter[T any] func(v *T)
-
-// tagInfo is the metadata for the tag
-type tagInfo struct {
-	tableName    string
-	fieldName    string
-	foreignField string
-}
 
 // builder is for building a single value
 type builder[T any] struct {
@@ -72,7 +60,7 @@ func New[T any](v T) *Factory[T] {
 		}
 	}
 
-	ti, ifd, err := extractTag(dataType)
+	ifd, err := extractTag(dataType)
 	if err != nil {
 		return &Factory[T]{
 			err: err,
@@ -82,9 +70,8 @@ func New[T any](v T) *Factory[T] {
 	return &Factory[T]{
 		dataType:       dataType,
 		empty:          reflect.New(dataType).Elem().Interface().(T),
-		associations:   map[string][]interface{}{},
+		associations:   [][]interface{}{},
 		storageName:    fmt.Sprintf("%ss", utils.CamelToSnake(dataType.Name())),
-		tagToInfo:      ti,
 		ignoreFields:   ifd,
 		index:          1,
 		isSetZeroValue: true,
@@ -128,7 +115,7 @@ func (f *Factory[T]) WithTrait(name string, tr setTraiter[T]) *Factory[T] {
 func (f *Factory[T]) Reset() {
 	f.index = 1
 	f.err = nil
-	f.associations = map[string][]interface{}{}
+	f.associations = [][]interface{}{}
 }
 
 // Build builds a value
@@ -140,9 +127,8 @@ func (f *Factory[T]) Build(ctx context.Context) *builder[T] {
 
 	if f.isSetZeroValue {
 		f.setNonZeroValues(&v, f.ignoreFields)
+		f.index++
 	}
-
-	f.index++
 
 	return &builder[T]{
 		ctx: ctx,
@@ -172,10 +158,10 @@ func (f *Factory[T]) BuildList(ctx context.Context, n int) *builderList[T] {
 
 		if f.isSetZeroValue {
 			f.setNonZeroValues(&v, f.ignoreFields)
+			f.index++
 		}
 
 		list[i] = &v
-		f.index++
 	}
 
 	return &builderList[T]{
@@ -220,9 +206,7 @@ func (b *builder[T]) Insert() (T, error) {
 	}
 
 	if len(b.f.associations) > 0 {
-		if err := b.setAss(); err != nil {
-			return b.f.empty, err
-		}
+		return b.insertWithAssoc(b.ctx)
 	}
 
 	val, err := b.f.db.Insert(b.ctx, db.InsertParams{StorageName: b.f.storageName, Value: b.v})
@@ -249,9 +233,7 @@ func (b *builderList[T]) Insert() ([]T, error) {
 	}
 
 	if len(b.f.associations) > 0 {
-		if err := b.setAss(); err != nil {
-			return nil, err
-		}
+		return b.insertWithAssoc(b.ctx)
 	}
 
 	// convert to any type
@@ -440,139 +422,53 @@ func (b *builderList[T]) SetZero(i int, fields ...string) *builderList[T] {
 
 // WihtOne set one association to the factory value.
 // Must pass a pointer to the association value.
-func (b *builder[T]) WithOne(v interface{}, ignoreFields ...string) *builder[T] {
+func (b *builder[T]) WithOne(vals ...interface{}) *builder[T] {
 	if b.err != nil {
 		return b
 	}
 
-	if err := b.f.setAssValue(v, ignoreFields); err != nil {
-		b.err = err
-		return b
+	for _, v := range vals {
+		if err := checkAssoc(v); err != nil {
+			b.err = err
+			return b
+		}
+		b.f.associations = append(b.f.associations, []interface{}{v})
 	}
 
-	name := reflect.TypeOf(v).Elem().Name()
-	b.f.associations[name] = []interface{}{v}
-	b.f.index++
 	return b
 }
 
 // WihtOne set one association to the factory value.
 // Must pass a pointer to the association value.
-func (b *builderList[T]) WithOne(v interface{}, ignoreFields ...string) *builderList[T] {
+func (b *builderList[T]) WithOne(vals ...interface{}) *builderList[T] {
 	if b.err != nil {
 		return b
 	}
 
-	if err := b.f.setAssValue(v, ignoreFields); err != nil {
-		b.err = err
-		return b
+	for _, v := range vals {
+		if err := checkAssoc(v); err != nil {
+			b.err = err
+			return b
+		}
+
+		b.f.associations = append(b.f.associations, []interface{}{v})
 	}
 
-	name := reflect.TypeOf(v).Elem().Name()
-	b.f.associations[name] = []interface{}{v}
-	b.f.index++
 	return b
 }
 
 // WithMany set many associations to the factory value.
 // Must pass a pointer to the association value.
-func (b *builderList[T]) WithMany(values []interface{}, ignoreFields ...string) *builderList[T] {
+func (b *builderList[T]) WithMany(vals []interface{}) *builderList[T] {
 	if b.err != nil {
 		return b
 	}
 
-	var curValName string
-	for _, v := range values {
-		if err := b.f.setAssValue(v, ignoreFields); err != nil {
-			b.err = err
-			return b
-		}
-
-		// check if the provided values are of the same type
-		// because we have to make sure all the value is pointer (setAssValue does that for us)
-		// before we can use Elem()
-		if curValName != "" && curValName != reflect.TypeOf(v).Elem().Name() {
-			b.err = errValueNotTheSameType
-			return b
-		}
-
-		name := reflect.TypeOf(v).Elem().Name()
-		b.f.associations[name] = append(b.f.associations[name], v)
-		b.f.index++
-		curValName = name
+	if err := checkAssocs(vals); err != nil {
+		b.err = err
+		return b
 	}
 
+	b.f.associations = append(b.f.associations, vals)
 	return b
-}
-
-// setAss sets and inserts the associations
-func (b *builder[T]) setAss() error {
-	// insert the associations
-	if err := b.f.insertAss(b.ctx); err != nil {
-		return err
-	}
-
-	// set the connection between the factory value and the associations
-	for name, vals := range b.f.associations {
-		// use vs[0] because we can make sure setAss(builder) only invoke with Build function
-		// which means there's only one factory value
-		// so that each associations only allow one value
-		t := b.f.tagToInfo[name]
-		if err := setForeignKey(b.v, t.fieldName, vals[0]); err != nil {
-			return err
-		}
-
-		// set the foreign field value if it's provided
-		if t.foreignField != "" {
-			if err := setField(b.v, t.foreignField, vals[0]); err != nil {
-				return err
-			}
-		}
-	}
-
-	// clear associations
-	b.f.associations = map[string][]interface{}{}
-
-	return nil
-}
-
-// setAss sets and inserts the associations
-func (b *builderList[T]) setAss() error {
-	// insert the associations
-	if err := b.f.insertAss(b.ctx); err != nil {
-		return err
-	}
-
-	// set the connection between the factory value and the associations
-	// use cachePrev because multiple values can have one association value
-	// e.g. multiple transaction belongs to one user
-	cachePrev := map[string]interface{}{}
-	for i, l := range b.list {
-		for name, vs := range b.f.associations {
-			var v interface{}
-			if i >= len(vs) {
-				v = cachePrev[name]
-			} else {
-				v = vs[i]
-				cachePrev[name] = vs[i]
-			}
-
-			t := b.f.tagToInfo[name]
-			if err := setForeignKey(l, t.fieldName, v); err != nil {
-				return err
-			}
-
-			// set the foreign field value if it's provided
-			if t.foreignField != "" {
-				if err := setField(l, t.foreignField, v); err != nil {
-					return err
-				}
-			}
-		}
-	}
-
-	// clear associations
-	b.f.associations = map[string][]interface{}{}
-
-	return nil
 }
