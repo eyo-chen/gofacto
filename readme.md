@@ -266,9 +266,30 @@ expenses, err := factory.BuildList(ctx, 2).WithMany([]interface{}{&user1, &user2
 ```
 
 This is one of the most powerful features of gofacto, it helps us easily build the structs with the complex associations relationships as long as setting the correct tags in the struct.<br>
-Note: Must pass the struct pointer to `WithOne` and `WithMany` methods.
 
 Find out more [examples](https://github.com/eyo-chen/gofacto/blob/main/examples/association_test.go).
+
+
+<details>
+    <summary>Best Practice to use <code>WithOne</code> & <code>WithMany</code></summary>
+    <ul>
+        <li>Must pass the struct pointer to <code>WithOne</code> or <code>WithMany</code></li>
+        <li>Must pass same type of struct pointer to <code>WithMany</code></li>
+        <li>Do not pass struct with cyclic dependency</li>
+    </ul>
+
+    ```go
+    // Do not do this:
+    type A struct {
+        B_ID int `gofacto:"foreignKey,struct:B"`
+    }
+    type B struct {
+        A_ID int `gofacto:"foreignKey,struct:A"`
+    }
+    ```
+</details>
+
+
 
 ### Reset
 Use `Reset` method to reset the factory.
