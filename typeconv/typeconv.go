@@ -59,7 +59,7 @@ func ToPointerT[T any](vals []interface{}) []*T {
 	return res
 }
 
-func copyValues[T any](dest *T, src T) error {
+func copyValues[T any](dest *T, src T) {
 	destValue := reflect.ValueOf(dest).Elem()
 	srcValue := reflect.ValueOf(src)
 
@@ -71,6 +71,4 @@ func copyValues[T any](dest *T, src T) error {
 			destField.Set(srcField)
 		}
 	}
-
-	return nil
 }
