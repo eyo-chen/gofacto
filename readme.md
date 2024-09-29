@@ -8,8 +8,9 @@ gofacto is a strongly-typed and user-friendly factory library for Go, designed t
 
 - Intuitive and straightforward usage
 - Strong typing and type safety
+- Flexible data customization
 - Support for various databases and ORMs
-- Basic association relationship support
+- Basic and multi-level association relationship support
 
 &nbsp;
 
@@ -210,7 +211,7 @@ order, err := factory.Build(ctx).WithOne(&c).Insert()
 // build two orders with two customers
 c1 := Customer{}
 c2 := Customer{}
-orders, err := factory.BuildList(ctx, 2).WithMany(&c1, &c2).Insert()
+orders, err := factory.BuildList(ctx, 2).WithMany([]interface{}{&c1, &c2}).Insert()
 // orders[0].CustomerID == c1.ID
 // orders[1].CustomerID == c2.ID
 
@@ -221,7 +222,72 @@ orders, err := factory.BuildList(ctx, 2).WithOne(&c1).Insert()
 // orders[1].CustomerID == c1.ID
 ```
 
+If there are multiple level association relationships, both `WithOne` and `WithMany` methods can also come in handy.<br>
+Suppose we have a following schema:
+```go
+type Expense struct {
+	ID         int
+	UserID     int `gofacto:"foreignKey,struct:User"`
+	CategoryID int `gofacto:"foreignKey,struct:Category,table:categories"`
+}
+
+type Category struct {
+	ID     int
+	UserID int `gofacto:"foreignKey,struct:User"`
+}
+
+type User struct {
+	ID int
+}
+```
+
+We can build the `Expense` struct with the associated `User` and `Category` structs by using `WithOne` and `WithMany` methods.
+```go
+// build one expense with one user and one category
+user := User{}
+category := Category{}
+expense, err := factory.Build(ctx).WithOne(&user).WithOne(&category).Insert()
+// expense.UserID == user.ID
+// expense.CategoryID == category.ID
+// category.UserID == user.ID
+
+// build two expenses with two users and two categories
+user1 := User{}
+user2 := User{}
+category1 := Category{}
+category2 := Category{}
+expenses, err := factory.BuildList(ctx, 2).WithMany([]interface{}{&user1, &user2}).WithMany([]interface{}{&category1, &category2}).Insert()
+// expenses[0].UserID == user1.ID
+// expenses[0].CategoryID == category1.ID
+// expenses[1].UserID == user2.ID
+// expenses[1].CategoryID == category2.ID
+// category1.UserID == user1.ID
+// category2.UserID == user2.ID
+```
+
+This is one of the most powerful features of gofacto, it helps us easily build the structs with the complex associations relationships as long as setting the correct tags in the struct.<br>
+
 Find out more [examples](https://github.com/eyo-chen/gofacto/blob/main/examples/association_test.go).
+
+
+<details>
+    <summary>Best Practice to use <code>WithOne</code> & <code>WithMany</code></summary>
+    <ul>
+        <li>Must pass the struct pointer to <code>WithOne</code> or <code>WithMany</code></li>
+        <li>Must pass same type of struct pointer to <code>WithMany</code></li>
+        <li>Do not pass struct with cyclic dependency</li>
+    </ul>
+
+    // Do not do this:
+    type A struct {
+        B_ID int `gofacto:"foreignKey,struct:B"`
+    }
+    type B struct {
+        A_ID int `gofacto:"foreignKey,struct:A"`
+    }
+</details>
+
+
 
 ### Reset
 Use `Reset` method to reset the factory.
@@ -402,28 +468,6 @@ type Order struct {
 ```
 If the struct has a custom type, gofacto will ignore the field, and leave it as zero value.<br>
 The clients need to set the values manually by using blueprint or overwrite if they don't want the zero value.<br>
-
-3. gofacto only supports basic associations relationship.
-If your database schema has a complex associations relationship, you might need to set the associations manually.<br>
-Suppose you have a following schema:
-```go
-type Expense struct {
-  ID          int
-  CategoryID  int
-}
-
-type Category struct {
-  ID      int
-  UserID  int
-}
-
-type User struct {
-  ID    int
-}
-```
-`Expense` struct has a foreign key `CategoryID` to `Category` struct, and `Category` struct has a foreign key `UserID` to `User` struct.<br>
- When building `Expense` data with `WithOne(&Category{})`, `Category` struct will be built, but `User` struct will not be built. The clients need to build `User` struct manually and set `UserID` to `Category` struct.
-
 
 &nbsp;
 

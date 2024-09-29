@@ -14,106 +14,165 @@ import (
 	"github.com/eyo-chen/gofacto/typeconv"
 )
 
-// order has a foreign key field `CustomerID` to customer
-type order struct {
+// expense has two foreign key fields `UserID` and `CategoryID` to `User` and `Category` structs
+type expense struct {
 	ID         int
-	CustomerID int `gofacto:"struct:customer"` // set the correct tag
-	Amount     int
+	UserID     int `gofacto:"foreignKey,struct:User"`
+	CategoryID int `gofacto:"foreignKey,struct:Category,table:categories"`
 }
 
-// Example_association demonstrates how to build associations value in an easy way.
+// category has a foreign key field `UserID` to `User` struct
+type category struct {
+	ID     int
+	UserID int `gofacto:"foreignKey,struct:User"`
+}
+
+type user struct {
+	ID int
+}
+
+// Example_association_basic demonstrates how to build basic associations value in an easy way.
 // First, we need to set the correct tag on the foreign key field to tell gofacto which struct to associate with.
 // Then, we can use `WithOne` or `WithMany` to create the association value and set the connection between the two structs.
-func Example_association() {
-	// init a oreder factory
-	f := gofacto.New(order{}).
+func Example_association_basic() {
+	f := gofacto.New(category{}).
 		WithDB(mysqlf.NewConfig(nil)) // you should pass db connection
 
-	// build one order with one customer
-	customer1 := customer{}
-	order1, err := f.Build(ctx).
-		WithOne(&customer1). // must pass the struct pointer to WithOne or WithMany
+	// build one category with one user
+	user1 := user{}
+	category1, err := f.Build(ctx).
+		WithOne(&user1). // must pass the struct pointer to WithOne or WithMany
 		Insert()
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(order1)                            // {ID: 1, CustomerID: 1, Amount: {{non-zero value}}}
-	fmt.Println(customer1)                         // {ID: 1, Gender: "", Name: {{non-zero value}}, Age: {{non-zero value}}}
-	fmt.Println(order1.CustomerID == customer1.ID) // true
+	fmt.Println(category1.UserID == user1.ID) // true
 
-	// build two orders with two customers
-	customer2 := customer{}
-	customer3 := customer{}
-	orders1, err := f.BuildList(ctx, 2).
-		WithMany([]interface{}{&customer2, &customer3}). // must pass the struct pointer to WithOne or WithMany
+	// build two categories with two users
+	user2 := user{}
+	user3 := user{}
+	categories1, err := f.BuildList(ctx, 2).
+		WithMany([]interface{}{&user2, &user3}). // must pass the struct pointer to WithOne or WithMany
 		Insert()
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(orders1[0])                            // {ID: 2, CustomerID: 2, Amount: {{non-zero value}}}
-	fmt.Println(orders1[1])                            // {ID: 3, CustomerID: 3, Amount: {{non-zero value}}}
-	fmt.Println(customer2)                             // {ID: 2, Gender: "", Name: {{non-zero value}}, Age: {{non-zero value}}}
-	fmt.Println(customer3)                             // {ID: 3, Gender: "", Name: {{non-zero value}}, Age: {{non-zero value}}}
-	fmt.Println(orders1[0].CustomerID == customer2.ID) // true
-	fmt.Println(orders1[1].CustomerID == customer3.ID) // true
+	fmt.Println(categories1[0].UserID == user2.ID) // true
+	fmt.Println(categories1[1].UserID == user3.ID) // true
 
-	// build two orders with one customer
-	customer4 := customer{}
-	orders2, err := f.BuildList(ctx, 2).
-		WithOne(&customer4). // must pass the struct pointer to WithOne or WithMany
+	// build two categories with one user
+	user4 := user{}
+	categories2, err := f.BuildList(ctx, 2).
+		WithOne(&user4). // must pass the struct pointer to WithOne or WithMany
 		Insert()
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(orders2[0])                            // {ID: 4, CustomerID: 4, Amount: {{non-zero value}}}
-	fmt.Println(orders2[1])                            // {ID: 5, CustomerID: 4, Amount: {{non-zero value}}}
-	fmt.Println(customer4)                             // {ID: 4, Gender: "", Name: {{non-zero value}}, Age: {{non-zero value}}}
-	fmt.Println(orders2[0].CustomerID == customer4.ID) // true
-	fmt.Println(orders2[1].CustomerID == customer4.ID) // true
+	fmt.Println(categories2[0].UserID == user4.ID) // true
+	fmt.Println(categories2[1].UserID == user4.ID) // true
 }
 
-// InsertOrders demonstrates how to use the functionality of `typeconv` package to simplify the code.
+// Example_association_advanced demonstrates how to build advanced associations value in an easy way.
+// In this example, we will build the expense with user and category, and the category is associated with user.
+func Example_association_advanced() {
+	f := gofacto.New(expense{}).
+		WithDB(mysqlf.NewConfig(nil)) // you should pass db connection
+
+	// build one expense with one user and one category
+	user1 := user{}
+	category1 := category{}
+	expense1, err := f.Build(ctx).
+		WithOne(&user1).
+		WithOne(&category1).
+		Insert()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(expense1.UserID == user1.ID)         // true
+	fmt.Println(expense1.CategoryID == category1.ID) // true
+	fmt.Println(category1.UserID == user1.ID)        // true
+	// You can also use .WithOne(&user1, &category1) to pass multiple structs to WithOne
+
+	// build two expenses with two users and two categories
+	user2 := user{}
+	user3 := user{}
+	category2 := category{}
+	category3 := category{}
+	expenses1, err := f.BuildList(ctx, 2).
+		WithMany([]interface{}{&user2, &user3}). // must pass same type of structs to WithMany
+		WithMany([]interface{}{&category2, &category3}).
+		Insert()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(expenses1[0].UserID == user2.ID)         // true
+	fmt.Println(expenses1[1].UserID == user3.ID)         // true
+	fmt.Println(expenses1[0].CategoryID == category2.ID) // true
+	fmt.Println(expenses1[1].CategoryID == category3.ID) // true
+	fmt.Println(category2.UserID == user2.ID)            // true
+	fmt.Println(category3.UserID == user3.ID)            // true
+
+	// build two expenses with one user and two categories
+	user5 := user{}
+	category4 := category{}
+	category5 := category{}
+	expenses2, err := f.BuildList(ctx, 2).
+		WithOne(&user5).
+		WithMany([]interface{}{&category4, &category5}).
+		Insert()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(expenses2[0].UserID == user5.ID)         // true
+	fmt.Println(expenses2[1].UserID == user5.ID)         // true
+	fmt.Println(expenses2[0].CategoryID == category4.ID) // true
+	fmt.Println(expenses2[1].CategoryID == category5.ID) // true
+	fmt.Println(category4.UserID == user5.ID)            // true
+	fmt.Println(category5.UserID == user5.ID)            // true
+}
+
+// InsertCategories demonstrates how to use the functionality of `typeconv` package to simplify the code.
 // In some cases, we might want to wrap the insert logic into a function.
-// In this case, we define the `InsertOrders` function to insert `n` orders with `n` customers.
-func InsertOrders(ctx context.Context, f *gofacto.Factory[order], n int) ([]order, []customer, error) {
-	// use `ToAnysWithOW` to generate `n` customers with any type
-	// The first parameter is the number of customers to generate
+// In this case, we define the `InsertCategories` function to insert `n` categories with `n` users.
+func InsertCategories(ctx context.Context, f *gofacto.Factory[category], n int) ([]category, []user, error) {
+	// use `ToAnysWithOW` to generate `n` users with any type
+	// The first parameter is the number of users to generate
 	// The second parameter is the value to override the default value(we pass nil because we don't want to override the default value)
-	customersAny := typeconv.ToAnysWithOW[customer](n, nil)
+	usersAny := typeconv.ToAnysWithOW[user](n, nil)
 
-	orders, err := f.BuildList(ctx, n).
-		WithMany(customersAny).
+	categories, err := f.BuildList(ctx, n).
+		WithMany(usersAny).
 		Insert()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	// convert the `[]any` to `[]customer` using `ToT`
-	customers := typeconv.ToT[customer](customersAny)
+	// convert the `[]any` to `[]user` using `ToT`
+	users := typeconv.ToT[user](usersAny)
 
-	return orders, customers, nil
+	return categories, users, nil
 }
 
-// Without the `typeconv` package, we would need to manually convert the `[]any` to `[]customer` using `ToT`
-func InsertOrdersWithoutTypeconv(ctx context.Context, f *gofacto.Factory[order], n int) ([]order, []customer, error) {
-	// manually create `n` customers with any type
-	customersAny := make([]interface{}, n)
+// Without the `typeconv` package, we would need to manually convert the `[]any` to `[]user` using `ToT`
+func InsertCategoriesWithoutTypeconv(ctx context.Context, f *gofacto.Factory[category], n int) ([]category, []user, error) {
+	// manually create `n` users with any type
+	usersAny := make([]interface{}, n)
 	for i := 0; i < n; i++ {
-		customersAny[i] = &customer{}
+		usersAny[i] = &user{}
 	}
 
-	orders, err := f.BuildList(ctx, n).
-		WithMany(customersAny).
+	categories, err := f.BuildList(ctx, n).
+		WithMany(usersAny).
 		Insert()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	// manually convert the `[]any` to `[]customer`
-	customers := make([]customer, n)
+	// manually convert the `[]any` to `[]user`
+	users := make([]user, n)
 	for i := 0; i < n; i++ {
-		customers[i] = *customersAny[i].(*customer)
+		users[i] = *usersAny[i].(*user)
 	}
 
-	return orders, customers, nil
+	return categories, users, nil
 }
