@@ -420,8 +420,20 @@ func (b *builderList[T]) SetZero(i int, fields ...string) *builderList[T] {
 	return b
 }
 
-// WihtOne set one association to the factory value.
-// Must pass a pointer to the association value.
+// WithOne sets one or more single-value associations for the factory.
+//
+// This function supports setting associations for both single-level and multi-level relationships.
+// Each argument must be a pointer to a struct representing the associated entity.
+//
+// Examples:
+//
+//  1. Single-level association (e.g., Transaction has a User):
+//     transactionFactory.WithOne(&User{})
+//
+//  2. Multi-level association (e.g., Transaction -> Category -> User):
+//     transactionFactory.WithOne(&Category{}, &User{})
+//
+// Note: All arguments must be pointers to structs. Non-pointer or non-struct arguments will result in an error.
 func (b *builder[T]) WithOne(vals ...interface{}) *builder[T] {
 	if b.err != nil {
 		return b
@@ -438,8 +450,20 @@ func (b *builder[T]) WithOne(vals ...interface{}) *builder[T] {
 	return b
 }
 
-// WihtOne set one association to the factory value.
-// Must pass a pointer to the association value.
+// WithOne sets one or more single-value associations for the factory.
+//
+// This function supports setting associations for both single-level and multi-level relationships.
+// Each argument must be a pointer to a struct representing the associated entity.
+//
+// Examples:
+//
+//  1. Single-level association (e.g., Transaction has a User):
+//     transactionFactory.WithOne(&User{})
+//
+//  2. Multi-level association (e.g., Transaction -> Category -> User):
+//     transactionFactory.WithOne(&Category{}, &User{})
+//
+// Note: All arguments must be pointers to structs. Non-pointer or non-struct arguments will result in an error.
 func (b *builderList[T]) WithOne(vals ...interface{}) *builderList[T] {
 	if b.err != nil {
 		return b
@@ -457,8 +481,21 @@ func (b *builderList[T]) WithOne(vals ...interface{}) *builderList[T] {
 	return b
 }
 
-// WithMany set many associations to the factory value.
-// Must pass a pointer to the association value.
+// WithMany sets multiple associations of the same type for each item in the factory list.
+//
+// The input must be a slice of interface{}, where each element is a pointer to a struct of the same type.
+//
+// Example:
+//
+//  1. Single-level association (e.g., Transactions has multiple Users):
+//     transactionFactory.WithMany([]interface{}{&User{}, &User{}})
+//
+//  2. Multi-level association (e.g., Transaction -> Category -> User):
+//     transactionFactory.WithMany([]interface{}{&Category{}, &Category{}}).WithMany([]interface{}{&User{}, &User{}})
+//
+// Note:
+//   - All elements in the input slice must be pointers to structs of the same type.
+//   - Non-pointer, non-struct, or mixed-type arguments will result in an error.
 func (b *builderList[T]) WithMany(vals []interface{}) *builderList[T] {
 	if b.err != nil {
 		return b
