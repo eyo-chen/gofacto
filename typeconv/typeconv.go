@@ -4,7 +4,7 @@ import (
 	"reflect"
 )
 
-// ToAnysWithOW converts the given number of values to a slice of pointers of given type with the given one overwrite.
+// ToAnysWithOW generates the given number of values to a slice of pointers of given type with the given one overwrite.
 func ToAnysWithOW[T any](i int, ow *T) []interface{} {
 	res := make([]interface{}, i)
 	for k := 0; k < i; k++ {
@@ -21,7 +21,7 @@ func ToAnysWithOW[T any](i int, ow *T) []interface{} {
 	return res
 }
 
-// ToAnysWithOWs converts the given number of values to a slice of pointers to the given type with the given multiple overwrites.
+// ToAnysWithOWs generates the given number of values to a slice of pointers to the given type with the given multiple overwrites.
 func ToAnysWithOWs[T any](i int, ows ...*T) []interface{} {
 	res := make([]interface{}, i)
 	for k := 0; k < i; k++ {
