@@ -278,7 +278,6 @@ Find out more [examples](https://github.com/eyo-chen/gofacto/blob/main/examples/
         <li>Do not pass struct with cyclic dependency</li>
     </ul>
 
-    ```go
     // Do not do this:
     type A struct {
         B_ID int `gofacto:"foreignKey,struct:B"`
@@ -286,7 +285,6 @@ Find out more [examples](https://github.com/eyo-chen/gofacto/blob/main/examples/
     type B struct {
         A_ID int `gofacto:"foreignKey,struct:A"`
     }
-    ```
 </details>
 
 
