@@ -1,6 +1,8 @@
 package typeconv
 
-import "testing"
+import (
+	"testing"
+)
 
 type Person struct {
 	ID   int
@@ -63,6 +65,12 @@ func TestToAnysWithOW(t *testing.T) {
 			for k, v := range res {
 				if *v.(*Person) != *test.want[k].(*Person) {
 					t.Errorf("expected %v, but got %v", *test.want[k].(*Person), *v.(*Person))
+				}
+
+				if test.i > 0 && k > 0 {
+					if v == res[0] {
+						t.Errorf("expected different memory addresses, but got the same for index %d", k)
+					}
 				}
 			}
 		})
@@ -137,6 +145,12 @@ func TestToAnysWithOWs(t *testing.T) {
 			for k, v := range res {
 				if *v.(*Person) != *test.want[k].(*Person) {
 					t.Errorf("expected %v, but got %v", *test.want[k].(*Person), *v.(*Person))
+				}
+
+				if test.i > 0 && k > 0 {
+					if v == res[0] {
+						t.Errorf("expected different memory addresses, but got the same for index %d", k)
+					}
 				}
 			}
 		})
