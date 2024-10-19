@@ -64,11 +64,12 @@ func setIDField(val reflect.Value) error {
 
 // testAssocStruct is a struct with a foreign key to test the association functionality.
 type testAssocStruct struct {
-	ID            int
-	ForeignKey    int  `gofacto:"foreignKey,struct:testStructWithID,field:ForeignValue"`
-	ForeignKey2   *int `gofacto:"foreignKey,struct:testStructWithID2,field:ForeignValue2,table:test_struct_with_id2s"`
-	ForeignValue  testStructWithID
-	ForeignValue2 *testStructWithID2
+	ID               int
+	ForeignKey       int  `gofacto:"foreignKey,struct:testStructWithID,field:ForeignValue"`
+	ForeignKey2      *int `gofacto:"foreignKey,struct:testStructWithID2,field:ForeignValue2,table:test_struct_with_id2s"`
+	CustomForeignKey int  `gofacto:"foreignKey,struct:testStructWithCustomFK,fk:OtherID"`
+	ForeignValue     testStructWithID
+	ForeignValue2    *testStructWithID2
 }
 
 // testStructWithID is a struct with an ID field to test the insert functionality.
@@ -89,6 +90,11 @@ type testStructWithID2 struct {
 type testStructWithID3 struct {
 	ID   int
 	Name string
+}
+
+type testStructWithCustomFK struct {
+	ID      int
+	OtherID int
 }
 
 type testStructWithCycle struct {
@@ -2575,18 +2581,19 @@ func setZero_OnBuilderListMany(t *testing.T) {
 
 func TestWithOne(t *testing.T) {
 	for _, fn := range map[string]func(*testing.T){
-		"when on builder, insert successfully":                       withOne_OnBuilder,
-		"when on builder with multi level, insert successfully":      withOne_OnBuilderMultiLevel,
-		"when on builder not pass ptr, return error":                 withOne_OnBuilderNotPassPtr,
-		"when on builder not pass struct, return error":              withOne_OnBuilderNotPassStruct,
-		"when on builder with err, return error":                     withOne_OnBuilderWithErr,
-		"when on builder with cycle, return error":                   withOne_OnBuilderWithCycle,
-		"when on builder list, insert successfully":                  withOne_OnBuilderList,
-		"when on builder list with multi level, insert successfully": withOne_OnBuilderListMultiLevel,
-		"when on builder list not pass ptr, return error":            withOne_OnBuilderListNotPassPtr,
-		"when on builder list not pass struct, return error":         withOne_OnBuilderListNotPassStruct,
-		"when on builder list with err, return error":                withOne_OnBuilderListWithErr,
-		"when on builder list with cycle, return error":              withOne_OnBuilderListWithCycle,
+		"when on builder, insert successfully":                        withOne_OnBuilder,
+		"when on builder with multi level, insert successfully":       withOne_OnBuilderMultiLevel,
+		"when on builder not pass ptr, return error":                  withOne_OnBuilderNotPassPtr,
+		"when on builder not pass struct, return error":               withOne_OnBuilderNotPassStruct,
+		"when on builder with err, return error":                      withOne_OnBuilderWithErr,
+		"when on builder with cycle, return error":                    withOne_OnBuilderWithCycle,
+		"when on builder with wrong custom foreign key, return error": withOne_OnBuilderWithWrongCustomFK,
+		"when on builder list, insert successfully":                   withOne_OnBuilderList,
+		"when on builder list with multi level, insert successfully":  withOne_OnBuilderListMultiLevel,
+		"when on builder list not pass ptr, return error":             withOne_OnBuilderListNotPassPtr,
+		"when on builder list not pass struct, return error":          withOne_OnBuilderListNotPassStruct,
+		"when on builder list with err, return error":                 withOne_OnBuilderListWithErr,
+		"when on builder list with cycle, return error":               withOne_OnBuilderListWithCycle,
 	} {
 		t.Run(testutils.GetFunName(fn), func(t *testing.T) {
 			fn(t)
@@ -2599,7 +2606,12 @@ func withOne_OnBuilder(t *testing.T) {
 
 	assVal := testStructWithID{}
 	assVal2 := testStructWithID2{}
-	val, err := f.Build(mockCTX).WithOne(&assVal).WithOne(&assVal2).Insert()
+	assVal3 := testStructWithCustomFK{}
+	val, err := f.Build(mockCTX).
+		WithOne(&assVal).
+		WithOne(&assVal2).
+		WithOne(&assVal3).
+		Insert()
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
@@ -2618,6 +2630,10 @@ func withOne_OnBuilder(t *testing.T) {
 
 	if err := testutils.CompareVal(val.ForeignValue2, &assVal2); err != nil {
 		t.Fatal(err.Error())
+	}
+
+	if val.CustomForeignKey != assVal3.OtherID {
+		t.Fatalf("foreignKey should be %v", assVal3.OtherID)
 	}
 }
 
@@ -2716,6 +2732,31 @@ func withOne_OnBuilderWithCycle(t *testing.T) {
 		t.Fatalf("error should be %v", errCycleDependency)
 	}
 	if err := testutils.CompareVal(val, testStructWithCycle{}); err != nil {
+		t.Fatal(err.Error())
+	}
+}
+
+func withOne_OnBuilderWithWrongCustomFK(t *testing.T) {
+	type parent struct {
+		ID int `gofacto:"foreignKey,struct:child,fk:WrongFk"`
+	}
+
+	type child struct {
+		ID      int
+		OtherID int
+	}
+
+	f := New(parent{}).WithDB(&mockDB{})
+
+	want := parent{}
+	wantErr := errFieldNotFound
+
+	val, err := f.Build(mockCTX).WithOne(&child{}).Insert()
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("error should be %v", wantErr)
+	}
+
+	if err := testutils.CompareVal(val, want); err != nil {
 		t.Fatal(err.Error())
 	}
 }
@@ -2889,7 +2930,13 @@ func withMany_CorrectCase(t *testing.T) {
 	assVal2 := testStructWithID{}
 	assVal3 := testStructWithID2{}
 	assVal4 := testStructWithID2{}
-	vals, err := f.BuildList(mockCTX, 2).WithMany([]interface{}{&assVal1, &assVal2}).WithMany([]interface{}{&assVal3, &assVal4}).Insert()
+	assVal5 := testStructWithCustomFK{}
+	assVal6 := testStructWithCustomFK{}
+	vals, err := f.BuildList(mockCTX, 2).
+		WithMany([]interface{}{&assVal1, &assVal2}).
+		WithMany([]interface{}{&assVal3, &assVal4}).
+		WithMany([]interface{}{&assVal5, &assVal6}).
+		Insert()
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
@@ -2924,6 +2971,14 @@ func withMany_CorrectCase(t *testing.T) {
 
 	if err := testutils.CompareVal(vals[1].ForeignValue2, &assVal4); err != nil {
 		t.Fatal(err.Error())
+	}
+
+	if vals[0].CustomForeignKey != assVal5.OtherID {
+		t.Fatalf("CustomForeignKey should be %v", assVal5.OtherID)
+	}
+
+	if vals[1].CustomForeignKey != assVal6.OtherID {
+		t.Fatalf("CustomForeignKey should be %v", assVal6.OtherID)
 	}
 }
 

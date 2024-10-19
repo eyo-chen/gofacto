@@ -7,11 +7,16 @@ import (
 	"github.com/eyo-chen/gofacto/internal/utils"
 )
 
+var (
+	defaultFkName = "ID"
+)
+
 // tag represents the metadata parsed from the custom tag
 type tag struct {
 	fieldName    string
 	structName   string
 	tableName    string
+	fkName       string
 	foreignField string
 	omit         bool
 }
@@ -91,6 +96,8 @@ func parseTag(field reflect.StructField) (tag, bool, error) {
 				t.tableName = kv[1]
 			case "field":
 				t.foreignField = kv[1]
+			case "fk":
+				t.fkName = kv[1]
 			default:
 				return tag{}, false, errTagFormat
 			}
@@ -99,6 +106,10 @@ func parseTag(field reflect.StructField) (tag, bool, error) {
 
 	if t.tableName == "" {
 		t.tableName = utils.CamelToSnake(t.structName) + "s"
+	}
+
+	if t.fkName == "" {
+		t.fkName = defaultFkName
 	}
 
 	return t, true, nil
