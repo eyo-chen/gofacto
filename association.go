@@ -24,6 +24,7 @@ type fkRef struct {
 	tableName    string
 	fieldName    string
 	foreignField string
+	fkName       string
 }
 
 // nodeInfo is used to store the information of a node for later reference.
@@ -131,7 +132,7 @@ func (f *Factory[T]) insertAssocNode(ctx context.Context, nodes []assocNode) ([]
 				}
 
 				// set the foreign key field
-				if err := setForeignKey(v, dep.fieldName, d); err != nil {
+				if err := setForeignKey(v, dep.fieldName, d, dep.fkName); err != nil {
 					return nil, err
 				}
 				if dep.foreignField != "" {
@@ -259,6 +260,7 @@ func (f *Factory[T]) genAssocNodes(nodeInfoMap map[string]nodeInfo) ([]assocNode
 				tableName:    t.tableName,
 				fieldName:    t.fieldName,
 				foreignField: t.foreignField,
+				fkName:       t.fkName,
 			})
 
 			// e.g. User(fk) -> SubCategory
@@ -281,7 +283,7 @@ func (f *Factory[T]) genAssocNodes(nodeInfoMap map[string]nodeInfo) ([]assocNode
 }
 
 // setForeignKey sets the value of the source's ID field to the target's foreign key(name) field
-func setForeignKey(target interface{}, name string, source interface{}) error {
+func setForeignKey(target interface{}, name string, source interface{}, fkName string) error {
 	targetField := reflect.ValueOf(target).Elem().FieldByName(name)
 	if !targetField.IsValid() {
 		return fmt.Errorf("%s: %w", name, errFieldNotFound)
@@ -291,9 +293,9 @@ func setForeignKey(target interface{}, name string, source interface{}) error {
 		return fmt.Errorf("%s: %w", name, errFieldCantSet)
 	}
 
-	sourceIDField := reflect.ValueOf(source).Elem().FieldByName("ID")
+	sourceIDField := reflect.ValueOf(source).Elem().FieldByName(fkName)
 	if !sourceIDField.IsValid() {
-		return fmt.Errorf("%s: %w", "ID", errFieldNotFound)
+		return fmt.Errorf("%s: %w", fkName, errFieldNotFound)
 	}
 
 	sourceIDKind := sourceIDField.Kind()
