@@ -197,10 +197,11 @@ type Order struct {
 }
 ```
 The format of the tag is following:<br>
-`gofacto:"foreignKey,struct:{{structName}},table:{{tableName}},field:{{fieldName}}"`<br>
+`gofacto:"foreignKey,struct:{{structName}},table:{{tableName}},field:{{fieldName}},refField:{{referenceFieldName}}"`<br>
 - `struct` is the name of the associated struct. It is required.<br>
 - `table` is the name of the table. It is optional, the snake case of the struct name(s) will be used if not provided.<br>
 - `field` is the name of the foreign value fields within the struct. It is optional.
+- `refField` is the name of the field in the associated struct that the foreign key references. It is optional, and defaults to `ID` if not provided.
 
 ```go
 // build an order with one customer
