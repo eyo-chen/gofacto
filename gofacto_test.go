@@ -67,7 +67,7 @@ type testAssocStruct struct {
 	ID               int
 	ForeignKey       int  `gofacto:"foreignKey,struct:testStructWithID,field:ForeignValue"`
 	ForeignKey2      *int `gofacto:"foreignKey,struct:testStructWithID2,field:ForeignValue2,table:test_struct_with_id2s"`
-	CustomForeignKey int  `gofacto:"foreignKey,struct:testStructWithCustomFK,fk:OtherID"`
+	CustomForeignKey int  `gofacto:"foreignKey,struct:testStructWithCustomFK,refField:OtherID"`
 	ForeignValue     testStructWithID
 	ForeignValue2    *testStructWithID2
 }
@@ -2738,7 +2738,7 @@ func withOne_OnBuilderWithCycle(t *testing.T) {
 
 func withOne_OnBuilderWithWrongCustomFK(t *testing.T) {
 	type parent struct {
-		ID int `gofacto:"foreignKey,struct:child,fk:WrongFk"`
+		ID int `gofacto:"foreignKey,struct:child,refField:WrongFk"`
 	}
 
 	type child struct {

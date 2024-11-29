@@ -7,8 +7,12 @@ import (
 	"github.com/eyo-chen/gofacto/internal/utils"
 )
 
-var (
-	defaultFkName = "ID"
+const (
+	defaultFkName  = "ID"
+	tagKeyStruct   = "struct"
+	tagKeyTable    = "table"
+	tagKeyField    = "field"
+	tagKeyRefField = "refField"
 )
 
 // tag represents the metadata parsed from the custom tag
@@ -90,13 +94,13 @@ func parseTag(field reflect.StructField) (tag, bool, error) {
 		for _, subPart := range subParts[1:] {
 			kv := strings.SplitN(subPart, ":", 2)
 			switch kv[0] {
-			case "struct":
+			case tagKeyStruct:
 				t.structName = kv[1]
-			case "table":
+			case tagKeyTable:
 				t.tableName = kv[1]
-			case "field":
+			case tagKeyField:
 				t.foreignField = kv[1]
-			case "fk":
+			case tagKeyRefField:
 				t.fkName = kv[1]
 			default:
 				return tag{}, false, errTagFormat
