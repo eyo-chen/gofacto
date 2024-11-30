@@ -196,12 +196,7 @@ type Order struct {
   Amount      float64
 }
 ```
-The format of the tag is following:<br>
-`gofacto:"foreignKey,struct:{{structName}},table:{{tableName}},field:{{fieldName}},refField:{{referenceFieldName}}"`<br>
-- `struct` is the name of the associated struct. It is required.<br>
-- `table` is the name of the table. It is optional, the snake case of the struct name(s) will be used if not provided.<br>
-- `field` is the name of the foreign value fields within the struct. It is optional.
-- `refField` is the name of the field in the associated struct that the foreign key references. It is optional, and defaults to `ID` if not provided.
+You can find more details about the tag format in [foreignKey tag](#foreignkey-tag).
 
 ```go
 // build an order with one customer
@@ -288,8 +283,6 @@ Find out more [examples](https://github.com/eyo-chen/gofacto/blob/main/examples/
     }
 </details>
 
-
-
 ### Reset
 Use `Reset` method to reset the factory.
 ```go
@@ -300,7 +293,7 @@ factory.Reset()
 &nbsp;
 
 ### Set Configurations
-#### WithBlueprint
+### WithBlueprint
 Use `WithBlueprint` method to set the blueprint function which is a clients defined function to generate the struct values.
 ```go
 func blueprint(i int) *Order {
@@ -320,7 +313,7 @@ The signature of the blueprint function is following:<br>
 
 Find out more [examples](https://github.com/eyo-chen/gofacto/blob/main/examples/blueprint_test.go).
 
-#### WithStorageName
+### WithStorageName
 Use `WithStorageName` method to set the storage name.
 ```go
 factory := gofacto.New(Order{}).
@@ -333,7 +326,7 @@ When using NoSQL databases, the storage name is the collection name. <br>
 
 It is optional, the snake case of the struct name(s) will be used if not provided.<br>
 
-#### WithDB
+### WithDB
 Use `WithDB` method to set the database connection.
 ```go
 factory := gofacto.New(Order{}).
@@ -344,7 +337,7 @@ When using raw PostgreSQL, use `postgresf` package. <br>
 When using MongoDB, use `mongof` package. <br>
 When using GORM, use `gormf` package. <br>
 
-#### WithIsSetZeroValue
+### WithIsSetZeroValue
 Use `WithIsSetZeroValue` method to set if the zero values are set.
 ```go
 factory := gofacto.New(Order{}).
@@ -354,7 +347,37 @@ The zero values will not be set when building the struct if the flag is set to f
 
 It is optional, it's true by default.
 
-#### omit tag
+### foreignKey tag
+In order to build the struct with the associated struct, we need to set the correct tag in the struct to tell gofacto how to build the associated struct.
+
+Suppose we have the following structs:<br>
+`Project` struct has a foreign key `EmployeeID` to reference to `Employee` struct.
+```go
+type Project struct {
+  ID          int
+  EmployeeID  int `gofacto:"foreignKey,struct:Employee,table:employees,field:Employee,refField:OtherID"`
+  Employee    Employee
+}
+
+type Employee struct {
+  ID      int
+  OtherID int
+  Name    string
+}
+```
+
+The format of the tag is following:<br>
+`gofacto:"foreignKey,struct:{{structName}},table:{{tableName}},field:{{fieldName}},refField:{{referenceFieldName}}"`<br>
+- `foreignKey` is the tag name. It is required.
+- `struct` specifies the name of the associated struct. It is required. In this case, `struct:Employee` indicates that `EmployeeID` is a foreign key to reference to `Employee` struct.
+- `table` specifies the table name of the associated struct. It is optional, the snake case and lower case of the struct name(s) will be used if not provided. In this case, `table:employees` indicates that the table name of `Employee` struct is `employees`. However, we can omit it and gofacto will handle it in this example.
+- `field` specifies which struct field contains the associated data. It is optional, and it's typically used with gorm. In this example, `field:Employee` indicates that the `Employee` field in the `Project` struct will hold the related `Employee` data after the relationship is loaded.
+- `refField` specifies which field to join on in the referenced struct. By default, it joins on the `ID` field, but you can specify a different field. For example, `refField:OtherID` tells gofacto to match `Project.EmployeeID` with `Employee.OtherID` instead of `Employee.ID`.
+
+Find out more [examples](https://github.com/eyo-chen/gofacto/blob/main/examples/association_test.go).
+
+
+### omit tag
 Use `omit` tag in the struct to ignore the field when building the struct.
 ```go
 type Order struct {
